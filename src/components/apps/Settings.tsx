@@ -1,118 +1,108 @@
 'use client';
 
-import React, { useState } from 'react';
-import { 
-  Palette, 
-  Globe, 
-  Volume2, 
-  Monitor, 
-  Shield, 
-  Info,
+import React, { useMemo, useState } from 'react';
+import {
+  Palette,
   Wifi,
-  Bluetooth
+  Volume2,
+  Monitor,
+  Shield,
+  Info,
+  Sun,
+  Moon,
+  Paintbrush,
 } from 'lucide-react';
 import { useDesktop } from '@/context/DesktopContext';
 
+type SettingsSectionId = 'appearance' | 'network' | 'sound' | 'display' | 'privacy' | 'about';
+
 interface SettingsSection {
-  id: string;
+  id: SettingsSectionId;
   name: string;
-  icon: React.ReactNode;
-  color: string;
+  icon: React.ComponentType<{ className?: string }>;
 }
 
 const settingsSections: SettingsSection[] = [
-  {
-    id: 'appearance',
-    name: 'Appearance',
-    icon: <Palette className="w-6 h-6" />,
-    color: 'bg-orange-500'
-  },
-  {
-    id: 'network',
-    name: 'Network',
-    icon: <Globe className="w-6 h-6" />,
-    color: 'bg-blue-500'
-  },
-  {
-    id: 'sound',
-    name: 'Sound',
-    icon: <Volume2 className="w-6 h-6" />,
-    color: 'bg-gray-600'
-  },
-  {
-    id: 'display',
-    name: 'Display',
-    icon: <Monitor className="w-6 h-6" />,
-    color: 'bg-gray-500'
-  },
-  {
-    id: 'privacy',
-    name: 'Privacy',
-    icon: <Shield className="w-6 h-6" />,
-    color: 'bg-yellow-600'
-  },
-  {
-    id: 'about',
-    name: 'About',
-    icon: <Info className="w-6 h-6" />,
-    color: 'bg-blue-600'
-  }
+  { id: 'appearance', name: 'Appearance', icon: Palette },
+  { id: 'network', name: 'Network', icon: Wifi },
+  { id: 'sound', name: 'Sound', icon: Volume2 },
+  { id: 'display', name: 'Display', icon: Monitor },
+  { id: 'privacy', name: 'Privacy', icon: Shield },
+  { id: 'about', name: 'About', icon: Info },
 ];
 
+const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ');
+
 export default function Settings() {
-  const { theme, setTheme } = useDesktop();
-  const [activeSection, setActiveSection] = useState('appearance');
+  const {
+    theme,
+    setTheme,
+    wifiEnabled,
+    setWifiEnabled,
+  } = useDesktop();
+  const [activeSection, setActiveSection] = useState<SettingsSectionId>('appearance');
+  const [volumeLevel, setVolumeLevel] = useState(75);
+  const [brightness, setBrightness] = useState(80);
+
+  const sectionLabel = useMemo(() => {
+    return settingsSections.find((section) => section.id === activeSection)?.name ?? 'Settings';
+  }, [activeSection]);
 
   const renderSectionContent = () => {
     switch (activeSection) {
       case 'appearance':
         return (
-          <div className="p-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8">Appearance</h2>
-            
-            <div className="mb-8">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">Theme</h3>
-              <div className="grid grid-cols-3 gap-6 max-w-2xl">
-                <button
-                  onClick={() => setTheme('light')}
-                  className={`relative p-6 rounded-2xl border-2 transition-all duration-200 ${
-                    theme === 'light' 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="w-full h-32 bg-white rounded-lg shadow-sm mb-4 border border-gray-200"></div>
-                  <p className="text-base font-medium text-gray-900">Light</p>
-                  {theme === 'light' && (
-                    <div className="absolute top-4 right-4 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                      <div className="w-3 h-3 bg-white rounded-full"></div>
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-2xl font-semibold text-[color:var(--text-primary)] mb-6">Appearance</h2>
+              
+              {/* Theme Selection */}
+              <div className="bg-[color:var(--color-surface)] border border-[color:var(--color-border)] rounded-xl p-6 mb-6">
+                <h3 className="text-lg font-medium text-[color:var(--text-primary)] mb-4">Theme</h3>
+                <p className="text-sm text-[color:var(--text-secondary)] mb-6">
+                  Choose between light and dark themes, or let the system decide.
+                </p>
+                
+                <div className="grid grid-cols-3 gap-4">
+                  <button
+                    onClick={() => setTheme('light')}
+                    className={cx(
+                      'p-4 rounded-lg border-2 transition-all duration-200',
+                      theme === 'light'
+                        ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]'
+                        : 'border-[color:var(--color-border)] hover:border-[color:var(--accent)]/50'
+                    )}
+                  >
+                    <div className="bg-white h-16 rounded border mb-3 flex items-center justify-center">
+                      <Sun className="h-6 w-6 text-gray-600" />
                     </div>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => setTheme('dark')}
-                  className={`relative p-6 rounded-2xl border-2 transition-all duration-200 ${
-                    theme === 'dark' 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="w-full h-32 bg-gray-900 rounded-lg shadow-sm mb-4 border border-gray-700"></div>
-                  <p className="text-base font-medium text-gray-900">Dark</p>
-                  {theme === 'dark' && (
-                    <div className="absolute top-4 right-4 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                      <div className="w-3 h-3 bg-white rounded-full"></div>
+                    <div className="text-sm font-medium text-center text-[color:var(--text-primary)]">Light</div>
+                  </button>
+                  
+                  <button
+                    onClick={() => setTheme('dark')}
+                    className={cx(
+                      'p-4 rounded-lg border-2 transition-all duration-200',
+                      theme === 'dark'
+                        ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]'
+                        : 'border-[color:var(--color-border)] hover:border-[color:var(--accent)]/50'
+                    )}
+                  >
+                    <div className="bg-gray-800 h-16 rounded mb-3 flex items-center justify-center">
+                      <Moon className="h-6 w-6 text-gray-300" />
                     </div>
-                  )}
-                </button>
-
-                <button
-                  className="relative p-6 rounded-2xl border-2 border-gray-200 hover:border-gray-300 transition-all duration-200"
-                >
-                  <div className="w-full h-32 bg-gradient-to-br from-purple-400 to-blue-500 rounded-lg shadow-sm mb-4"></div>
-                  <p className="text-base font-medium text-gray-900">Auto</p>
-                </button>
+                    <div className="text-sm font-medium text-center text-[color:var(--text-primary)]">Dark</div>
+                  </button>
+                  
+                  <button
+                    className="p-4 rounded-lg border-2 border-[color:var(--color-border)] hover:border-[color:var(--accent)]/50 transition-all duration-200"
+                  >
+                    <div className="bg-gradient-to-br from-blue-400 to-purple-500 h-16 rounded mb-3 flex items-center justify-center">
+                      <Paintbrush className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="text-sm font-medium text-center text-[color:var(--text-secondary)]">Auto</div>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -120,33 +110,137 @@ export default function Settings() {
 
       case 'network':
         return (
-          <div className="p-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8">Network</h2>
-            
-            <div className="space-y-8">
-              <div className="bg-white p-6 rounded-2xl border border-gray-200">
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-2xl font-semibold text-[color:var(--text-primary)] mb-6">Network</h2>
+              
+              {/* Wi-Fi Settings */}
+              <div className="bg-[color:var(--color-surface)] border border-[color:var(--color-border)] rounded-xl p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                      <Wifi className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">WiFi</h3>
-                      <p className="text-sm text-gray-600">YourNetwork</p>
+                  <div>
+                    <h3 className="text-lg font-medium text-[color:var(--text-primary)]">Wi-Fi</h3>
+                    <p className="text-sm text-[color:var(--text-secondary)]">
+                      Manage wireless network connections
+                    </p>
+                  </div>
+                  
+                  <button
+                    onClick={() => setWifiEnabled(!wifiEnabled)}
+                    className={cx(
+                      'relative inline-flex h-8 w-14 items-center rounded-full transition-colors duration-200',
+                      wifiEnabled ? 'bg-[color:var(--accent)]' : 'bg-[color:var(--color-border)]'
+                    )}
+                  >
+                    <span
+                      className={cx(
+                        'inline-block h-6 w-6 transform rounded-full bg-white transition-transform duration-200',
+                        wifiEnabled ? 'translate-x-7' : 'translate-x-1'
+                      )}
+                    />
+                  </button>
+                </div>
+                
+                {wifiEnabled && (
+                  <div className="mt-6 p-4 bg-[color:var(--accent-soft)] border border-[color:var(--accent)]/20 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-[color:var(--text-primary)]">YourNetwork</div>
+                        <div className="text-sm text-[color:var(--text-secondary)]">Connected</div>
+                      </div>
+                      <div className="text-sm text-[color:var(--accent)]">Connected</div>
                     </div>
                   </div>
-                  <div className="text-sm text-gray-500">Connected</div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'sound':
+        return (
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-2xl font-semibold text-[color:var(--text-primary)] mb-6">Sound</h2>
+              
+              <div className="bg-[color:var(--color-surface)] border border-[color:var(--color-border)] rounded-xl p-6">
+                <h3 className="text-lg font-medium text-[color:var(--text-primary)] mb-6">Volume</h3>
+                
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-medium text-[color:var(--text-primary)]">Master Volume</span>
+                      <span className="text-sm text-[color:var(--text-secondary)]">{volumeLevel}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={volumeLevel}
+                      onChange={(e) => setVolumeLevel(parseInt(e.target.value))}
+                      className="w-full h-2 bg-[color:var(--color-border)] rounded-lg appearance-none cursor-pointer"
+                      style={{
+                        background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${volumeLevel}%, var(--color-border) ${volumeLevel}%, var(--color-border) 100%)`
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
+            </div>
+          </div>
+        );
 
-              <div className="bg-white p-6 rounded-2xl border border-gray-200">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-gray-400 rounded-full flex items-center justify-center">
-                    <Bluetooth className="w-6 h-6 text-white" />
+      case 'display':
+        return (
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-2xl font-semibold text-[color:var(--text-primary)] mb-6">Display</h2>
+              
+              <div className="bg-[color:var(--color-surface)] border border-[color:var(--color-border)] rounded-xl p-6">
+                <h3 className="text-lg font-medium text-[color:var(--text-primary)] mb-6">Brightness</h3>
+                
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-[color:var(--text-primary)]">Screen Brightness</span>
+                    <span className="text-sm text-[color:var(--text-secondary)]">{brightness}%</span>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Bluetooth</h3>
-                    <p className="text-sm text-gray-600">Off</p>
+                  <input
+                    type="range"
+                    min="10"
+                    max="100"
+                    value={brightness}
+                    onChange={(e) => setBrightness(parseInt(e.target.value))}
+                    className="w-full h-2 bg-[color:var(--color-border)] rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${(brightness - 10) / 0.9}%, var(--color-border) ${(brightness - 10) / 0.9}%, var(--color-border) 100%)`
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'privacy':
+        return (
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-2xl font-semibold text-[color:var(--text-primary)] mb-6">Privacy</h2>
+              
+              <div className="bg-[color:var(--color-surface)] border border-[color:var(--color-border)] rounded-xl p-6">
+                <h3 className="text-lg font-medium text-[color:var(--text-primary)] mb-4">Location Services</h3>
+                <p className="text-sm text-[color:var(--text-secondary)] mb-6">
+                  Control which applications can access your location.
+                </p>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-[color:var(--color-surface-muted)] rounded-lg">
+                    <div>
+                      <div className="font-medium text-[color:var(--text-primary)]">Location Services</div>
+                      <div className="text-sm text-[color:var(--text-secondary)]">Allow apps to use your location</div>
+                    </div>
+                    <button className="relative inline-flex h-8 w-14 items-center rounded-full bg-[color:var(--color-border)] transition-colors duration-200">
+                      <span className="inline-block h-6 w-6 transform rounded-full bg-white translate-x-1 transition-transform duration-200" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -156,44 +250,40 @@ export default function Settings() {
 
       case 'about':
         return (
-          <div className="p-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8">About</h2>
-            
-            <div className="bg-white p-8 rounded-2xl border border-gray-200">
-              <div className="flex items-center mb-8">
-                <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center mr-6">
-                  <span className="text-3xl font-bold text-white">F</span>
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-2xl font-semibold text-[color:var(--text-primary)] mb-6">About</h2>
+              
+              <div className="bg-[color:var(--color-surface)] border border-[color:var(--color-border)] rounded-xl p-6">
+                <div className="flex items-center gap-6 mb-6">
+                  <div className="w-16 h-16 bg-[color:var(--accent)] rounded-full flex items-center justify-center">
+                    <span className="text-white text-2xl font-bold">F</span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-[color:var(--text-primary)]">Fedora 39</h3>
+                    <p className="text-[color:var(--text-secondary)]">GNOME 45 Workstation</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900">Fedora Linux 39</h3>
-                  <p className="text-lg text-gray-600">Workstation Edition</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-8">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-2">Version</h4>
-                  <p className="text-lg text-gray-900">39 (Workstation Edition)</p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-2">Kernel</h4>
-                  <p className="text-lg text-gray-900">6.5.6-300.fc39.x86_64</p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-2">Desktop Environment</h4>
-                  <p className="text-lg text-gray-900">GNOME 45.1</p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-2">Memory</h4>
-                  <p className="text-lg text-gray-900">16.0 GiB</p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-2">Storage</h4>
-                  <p className="text-lg text-gray-900">512 GB SSD</p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-2">Graphics</h4>
-                  <p className="text-lg text-gray-900">Intel UHD Graphics 620</p>
+                
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-sm font-medium text-[color:var(--text-primary)]">Version</div>
+                      <div className="text-sm text-[color:var(--text-secondary)]">39.1.5</div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-[color:var(--text-primary)]">Kernel</div>
+                      <div className="text-sm text-[color:var(--text-secondary)]">6.5.6-300.fc39.x86_64</div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-[color:var(--text-primary)]">Memory</div>
+                      <div className="text-sm text-[color:var(--text-secondary)]">16.0 GB</div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-[color:var(--text-primary)]">Storage</div>
+                      <div className="text-sm text-[color:var(--text-secondary)]">512 GB SSD</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -201,57 +291,47 @@ export default function Settings() {
         );
 
       default:
-        return (
-          <div className="p-8 flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Monitor className="w-12 h-12 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Settings Panel</h3>
-              <p className="text-gray-600">Select a category from the sidebar to configure your system.</p>
-            </div>
-          </div>
-        );
+        return null;
     }
   };
 
   return (
-    <div className="h-full bg-gray-50 flex">
+    <div className="flex h-full w-full bg-[color:var(--color-surface)] text-[color:var(--text-primary)] rounded-lg overflow-hidden">
       {/* Sidebar */}
-      <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-        <div className="p-6 border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+      <div className="w-64 bg-[color:var(--color-surface-muted)] border-r border-[color:var(--color-border)]">
+        <div className="p-6 border-b border-[color:var(--color-border)]">
+          <h1 className="text-lg font-semibold text-[color:var(--text-primary)]">Settings</h1>
         </div>
         
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-4 space-y-2">
-            {settingsSections.map((section) => (
+        <div className="p-4 space-y-2">
+          {settingsSections.map((section) => {
+            const Icon = section.icon;
+            const isActive = activeSection === section.id;
+            
+            return (
               <button
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
-                className={`w-full flex items-center space-x-4 p-4 rounded-xl text-left transition-all duration-200 ${
-                  activeSection === section.id
-                    ? 'bg-blue-500 text-white shadow-lg'
-                    : 'hover:bg-gray-50 text-gray-700'
-                }`}
+                className={cx(
+                  'w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-colors duration-200',
+                  isActive
+                    ? 'bg-[color:var(--accent)] text-white'
+                    : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--color-surface)] hover:text-[color:var(--text-primary)]'
+                )}
               >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  activeSection === section.id ? 'bg-white/20' : section.color
-                }`}>
-                  <div className={activeSection === section.id ? 'text-white' : 'text-white'}>
-                    {section.icon}
-                  </div>
-                </div>
+                <Icon className="h-5 w-5" />
                 <span className="font-medium">{section.name}</span>
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
-        {renderSectionContent()}
+        <div className="p-8">
+          {renderSectionContent()}
+        </div>
       </div>
     </div>
   );

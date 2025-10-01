@@ -1,83 +1,147 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { 
-  Search, 
+import React, { useState, useMemo, useEffect } from 'react';
+import Image from 'next/image';
+import {
+  Search,
   X,
-  Terminal, 
-  User, 
-  Code, 
-  FolderOpen, 
+  Terminal,
   Settings,
   Calendar,
-  Image,
-  Music,
-  Video,
+  Image as ImageIcon,
+  Monitor,
   FileText,
-  Calculator,
-  Gamepad2,
-  Monitor
 } from 'lucide-react';
 import { useDesktop } from '@/context/DesktopContext';
+
+type AppIcon =
+  | { type: 'image'; src: string; alt: string }
+  | { type: 'gradient'; gradient: string; glyph: React.ReactNode };
 
 interface App {
   id: string;
   name: string;
-  icon: React.ReactNode;
+  icon: AppIcon;
   appType: string;
   title: string;
+  description?: string;
 }
+
+const iconShadow = 'shadow-[0_18px_36px_rgba(15,23,42,0.24)]';
+const baseIcon = 'flex items-center justify-center rounded-[22px]';
+const iconSizes: Record<'lg' | 'md', string> = {
+  lg: 'h-16 w-16',
+  md: 'h-12 w-12',
+};
+
+const renderAppIcon = (icon: AppIcon, size: 'lg' | 'md' = 'lg') => {
+  const dimensions = size === 'lg' ? 64 : 48;
+
+  if (icon.type === 'image') {
+    return (
+      <div
+        className={`${baseIcon} ${iconSizes[size]} overflow-hidden bg-[color:var(--color-surface)] ${iconShadow}`}
+      >
+        <Image
+          src={icon.src}
+          alt={icon.alt}
+          width={dimensions}
+          height={dimensions}
+          className="h-full w-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`${baseIcon} ${iconSizes[size]} bg-gradient-to-br ${icon.gradient} text-white ${iconShadow}`}
+    >
+      {icon.glyph}
+    </div>
+  );
+};
 
 const apps: App[] = [
   {
-    id: 'portfolio',
-    name: 'Portfolio',
-    icon: <User className="w-16 h-16" />,
-    appType: 'portfolio',
-    title: 'Portfolio'
-  },
-  {
     id: 'files',
     name: 'Files',
-    icon: <FolderOpen className="w-16 h-16" />,
+    icon: { type: 'image', src: '/dock/files.svg', alt: 'Files' },
     appType: 'files',
-    title: 'Files'
+    title: 'Files',
+    description: 'Browse your folders',
+  },
+  {
+    id: 'portfolio',
+    name: 'Portfolio',
+    icon: { type: 'image', src: '/dock/portfolio.svg', alt: 'Portfolio' },
+    appType: 'portfolio',
+    title: 'Portfolio',
+    description: 'Projects and case studies',
   },
   {
     id: 'terminal',
     name: 'Terminal',
-    icon: <Terminal className="w-16 h-16" />,
+    icon: {
+      type: 'gradient',
+      gradient: 'from-slate-900 via-slate-800 to-slate-700',
+      glyph: <Terminal className="h-7 w-7" strokeWidth={1.6} />,
+    },
     appType: 'terminal',
-    title: 'Terminal'
+    title: 'Terminal',
+    description: 'Command line access',
   },
   {
     id: 'code',
     name: 'Code Editor',
-    icon: <Code className="w-16 h-16" />,
+    icon: { type: 'image', src: '/dock/code.svg', alt: 'Code Editor' },
     appType: 'code-editor',
-    title: 'Code Editor'
+    title: 'Code Editor',
+    description: 'Edit your source files',
+  },
+  {
+    id: 'text-editor',
+    name: 'Text Editor',
+    icon: {
+      type: 'gradient',
+      gradient: 'from-blue-500 via-blue-400 to-blue-600',
+      glyph: <FileText className="h-7 w-7" strokeWidth={1.5} />,
+    },
+    appType: 'text-editor',
+    title: 'Text Editor',
+    description: 'Simple text and document editing',
   },
   {
     id: 'settings',
     name: 'Settings',
-    icon: <Settings className="w-16 h-16" />,
+    icon: {
+      type: 'gradient',
+      gradient: 'from-sky-500 via-indigo-500 to-purple-500',
+      glyph: <Settings className="h-7 w-7" strokeWidth={1.5} />,
+    },
     appType: 'settings',
-    title: 'Settings'
+    title: 'Settings',
+    description: 'Personalise the desktop',
   },
   {
-    id: 'calendar',
-    name: 'Calendar',
-    icon: <Calendar className="w-16 h-16" />,
-    appType: 'calendar',
-    title: 'Calendar'
-  },
-  {
-    id: 'photos',
-    name: 'Photos',
-    icon: <Image className="w-16 h-16" />,
-    appType: 'photos',
-    title: 'Photos'
+    id: 'system-monitor',
+    name: 'Monitor',
+    icon: {
+      type: 'gradient',
+      gradient: 'from-emerald-400 to-emerald-500',
+      glyph: <Monitor className="h-7 w-7" strokeWidth={1.5} />,
+    },
+    appType: 'system-monitor',
+    title: 'System Monitor',
+    description: 'Performance monitoring',
   }
+];
+
+const workspaceGradients = [
+  'from-sky-500 via-indigo-500 to-purple-500',
+  'from-emerald-500 via-teal-500 to-cyan-500',
+  'from-orange-500 via-amber-500 to-yellow-400',
+  'from-rose-500 via-pink-500 to-fuchsia-500',
 ];
 
 interface ActivitiesPanelProps {
@@ -87,21 +151,31 @@ interface ActivitiesPanelProps {
 export default function ActivitiesPanel({ isVisible }: ActivitiesPanelProps) {
   const { windows, openWindow, focusWindow, updateWindow, closePanels } = useDesktop();
   const [searchQuery, setSearchQuery] = useState('');
+  const [now, setNow] = useState<Date>(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const filteredApps = useMemo(() => {
     if (!searchQuery) return apps;
-    return apps.filter(app => 
-      app.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const query = searchQuery.toLowerCase();
+    return apps.filter(
+      (app) =>
+        app.name.toLowerCase().includes(query) ||
+        app.description?.toLowerCase().includes(query)
     );
   }, [searchQuery]);
 
-  const runningWindows = useMemo(() => {
-    return windows.filter(w => !w.minimized);
-  }, [windows]);
+  const runningWindows = useMemo(
+    () => windows.filter((w) => !w.minimized),
+    [windows]
+  );
 
   const handleAppClick = (app: App) => {
-    const existingWindow = windows.find(w => w.type === app.appType);
-    
+    const existingWindow = windows.find((w) => w.type === app.appType);
+
     if (existingWindow) {
       if (existingWindow.minimized) {
         updateWindow(existingWindow.id, { minimized: false });
@@ -112,7 +186,7 @@ export default function ActivitiesPanel({ isVisible }: ActivitiesPanelProps) {
     } else {
       openWindow(app.appType, app.title);
     }
-    
+
     closePanels();
   };
 
@@ -123,101 +197,198 @@ export default function ActivitiesPanel({ isVisible }: ActivitiesPanelProps) {
 
   if (!isVisible) return null;
 
+  const formattedTime = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const formattedDate = now.toLocaleDateString([], {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const fallbackIcon: AppIcon = {
+    type: 'gradient',
+    gradient: 'from-slate-600 via-slate-500 to-slate-700',
+    glyph: <Monitor className="h-6 w-6" strokeWidth={1.4} />,
+  };
+
   return (
     <>
-      {/* Full Screen Overlay */}
-      <div 
-        className="fixed inset-0 bg-black/80 z-40"
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-[rgba(8,15,31,0.78)] backdrop-blur-3xl transition-opacity duration-300"
         onClick={closePanels}
+        aria-hidden="true"
       />
-      
-      {/* Activities Overview */}
-      <div className="fixed inset-0 z-50 flex flex-col">
-        
-        {/* Search Bar */}
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-full max-w-2xl px-8">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search for applications, files, and more..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-16 px-8 text-2xl bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl text-white placeholder-white/70 focus:outline-none focus:bg-white/15 focus:border-white/30 transition-all duration-200"
-                autoFocus
-              />
-              <Search className="absolute right-6 top-1/2 transform -translate-y-1/2 w-6 h-6 text-white/70" />
-            </div>
-          </div>
-        </div>
 
-        {/* Applications Grid */}
-        <div className="flex-[2] flex items-center justify-center px-20">
-          <div className="w-full max-w-6xl">
-            <div className="grid grid-cols-7 gap-8 justify-items-center">
-              {filteredApps.map(app => (
+      {/* Main Content Container */}
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="min-h-full flex items-center justify-center px-6 py-16 sm:px-10">
+          <div className="w-full max-w-5xl flex flex-col gap-10 text-[color:var(--text-primary)]">
+            <div className="flex items-center justify-between">
+              <span className="rounded-full border border-[color:var(--glass-border-muted)] bg-white/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-[color:var(--text-secondary)]">
+                Activities
+              </span>
+              <div className="flex items-center gap-3 text-right">
+                <div className="text-sm font-semibold text-[color:var(--text-secondary)]">
+                  {formattedDate}
+                </div>
+                <div className="rounded-full border border-[color:var(--glass-border-muted)] bg-white/10 px-4 py-1 text-sm font-semibold">
+                  {formattedTime}
+                </div>
                 <button
-                  key={app.id}
-                  onClick={() => handleAppClick(app)}
-                  className="group flex flex-col items-center p-6 rounded-2xl hover:bg-white/10 transition-all duration-200 transform hover:scale-105"
+                  type="button"
+                  onClick={closePanels}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--glass-border-muted)] bg-white/10 text-[color:var(--text-secondary)] transition-all duration-200 hover:bg-white/20 hover:text-[color:var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)] focus-visible:ring-offset-1 focus-visible:ring-offset-[color:var(--color-surface-glass)]"
+                  aria-label="Close Activities Panel"
                 >
-                  <div className="mb-4 text-white group-hover:scale-110 transition-transform duration-200">
-                    {app.icon}
-                  </div>
-                  <span className="text-white text-lg font-medium text-center">
-                    {app.name}
-                  </span>
+                  <X className="h-5 w-5" />
                 </button>
-              ))}
+              </div>
             </div>
-            
-            {filteredApps.length === 0 && (
-              <div className="text-center text-white/70">
-                <p className="text-2xl mb-4">No results found</p>
-                <p className="text-lg">Try a different search term</p>
+
+            <div className="glass-panel rounded-[32px] border border-[color:var(--glass-border-muted)] px-6 py-6 sm:px-8 sm:py-7">
+              <div className="flex flex-col gap-4">
+                <label htmlFor="activities-search" className="text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--text-muted)]">
+                  Search
+                </label>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-[color:var(--accent-strong)]">
+                    <Search className="h-5 w-5" />
+                  </div>
+                  <input
+                    id="activities-search"
+                    type="text"
+                    placeholder="Search applications, files, and workspaces"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    className="flex-1 rounded-2xl border border-transparent bg-white/10 px-5 py-3 text-lg font-medium text-[color:var(--text-primary)] placeholder:text-[color:var(--text-secondary)]/70 focus:border-[color:var(--accent)]/40 focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]/40"
+                    autoFocus
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="rounded-full border border-transparent px-4 py-2 text-sm font-semibold text-[color:var(--accent-strong)] transition-colors duration-200 hover:border-[color:var(--accent)]/40 hover:bg-[var(--accent-soft)]"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {runningWindows.length > 0 && (
+              <div className="glass-panel rounded-[32px] border border-[color:var(--glass-border-muted)] px-6 py-6 sm:px-8">
+                <div className="flex items-center justify-between pb-4">
+                  <h2 className="text-sm font-semibold uppercase tracking-[0.25em] text-[color:var(--text-secondary)]">
+                    Open Windows
+                  </h2>
+                  <span className="text-xs font-semibold text-[color:var(--text-muted)]">
+                    {runningWindows.length} active
+                  </span>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {runningWindows.map((window, index) => {
+                    const app = apps.find((item) => item.appType === window.type);
+                    const gradient = workspaceGradients[index % workspaceGradients.length];
+
+                    return (
+                      <button
+                        key={window.id}
+                        type="button"
+                        onClick={() => handleWindowClick(window.id)}
+                        className="group rounded-3xl border border-transparent bg-white/10 p-[1px] text-left transition-all duration-200 hover:border-[color:var(--accent)]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]/40"
+                      >
+                        <div className="rounded-[28px] bg-[color:var(--color-surface-glass)]/90 p-5">
+                          <div className={`flex items-center gap-4 rounded-2xl bg-gradient-to-br ${gradient} px-5 py-4 text-white shadow-[0_18px_36px_rgba(15,23,42,0.25)]`}>
+                            <div className="text-xs font-semibold uppercase tracking-[0.45em] opacity-70">
+                              {index + 1}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/80">
+                                Workspace {index + 1}
+                              </span>
+                              <span className="text-base font-semibold leading-tight">
+                                {window.title}
+                              </span>
+                            </div>
+                            <div className="ml-auto flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-sm font-semibold">
+                              {(app?.name ?? window.type).slice(0, 2).toUpperCase()}
+                            </div>
+                          </div>
+                          <div className="mt-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="scale-90">
+                                {renderAppIcon(app?.icon ?? fallbackIcon, 'md')}
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-[color:var(--text-primary)]">
+                                  {window.title}
+                                </p>
+                                <p className="text-xs text-[color:var(--text-secondary)]">
+                                  {app?.description ?? 'Running window'}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-xs font-semibold text-[color:var(--text-muted)]">
+                              #{window.id}
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Running Applications / Windows */}
-        {runningWindows.length > 0 && (
-          <div className="flex-1 flex items-start justify-center pt-8 pb-20">
-            <div className="flex space-x-6">
-              {runningWindows.map(window => {
-                const app = apps.find(a => a.appType === window.type);
-                return (
+            <div className="glass-panel rounded-[32px] border border-[color:var(--glass-border-muted)] px-6 py-6 sm:px-8">
+              <div className="flex flex-wrap items-center justify-between gap-4 pb-4">
+                <div className="space-y-2">
+                  <h2 className="text-sm font-semibold uppercase tracking-[0.25em] text-[color:var(--text-secondary)]">
+                    Applications
+                  </h2>
+                  <p className="text-sm text-[color:var(--text-secondary)]/80">
+                    Launch favourites in a single click.
+                  </p>
+                </div>
+                <span className="rounded-full border border-[color:var(--glass-border-muted)] bg-white/10 px-4 py-1 text-xs font-semibold text-[color:var(--text-muted)]">
+                  {filteredApps.length} Listed
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4">
+                {filteredApps.map((app) => (
                   <button
-                    key={window.id}
-                    onClick={() => handleWindowClick(window.id)}
-                    className="group relative"
+                    key={app.id}
+                    type="button"
+                    onClick={() => handleAppClick(app)}
+                    className="group flex flex-col items-start gap-4 rounded-3xl border border-transparent bg-white/10 px-5 py-6 text-left text-[color:var(--text-secondary)] transition-all duration-200 hover:border-[color:var(--accent)]/40 hover:bg-[var(--accent-soft)] hover:text-[color:var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]/40"
                   >
-                    <div className="w-48 h-32 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 overflow-hidden group-hover:bg-white/15 transition-all duration-200 transform group-hover:scale-105">
-                      <div className="h-6 bg-gray-700/50 flex items-center px-3">
-                        <div className="flex space-x-1.5">
-                          <div className="w-2.5 h-2.5 bg-red-500 rounded-full"></div>
-                          <div className="w-2.5 h-2.5 bg-yellow-500 rounded-full"></div>
-                          <div className="w-2.5 h-2.5 bg-green-500 rounded-full"></div>
-                        </div>
-                        <span className="ml-3 text-xs text-white/80 truncate">
-                          {window.title}
+                    <span className="transition-transform duration-200 group-hover:scale-105">
+                      {renderAppIcon(app.icon, 'lg')}
+                    </span>
+                    <div className="space-y-1">
+                      <span className="block text-base font-semibold text-[color:var(--text-primary)]">
+                        {app.name}
+                      </span>
+                      {app.description && (
+                        <span className="block text-sm text-[color:var(--text-secondary)]">
+                          {app.description}
                         </span>
-                      </div>
-                      <div className="flex-1 flex items-center justify-center p-4">
-                        <div className="text-white/60">
-                          {app?.icon}
-                        </div>
-                      </div>
+                      )}
                     </div>
-                    <p className="text-white text-sm mt-2 text-center truncate">
-                      {window.title}
-                    </p>
                   </button>
-                );
-              })}
+                ))}
+              </div>
+
+              {filteredApps.length === 0 && (
+                <div className="mt-8 rounded-3xl border border-dashed border-[color:var(--glass-border-muted)] bg-white/10 px-6 py-10 text-center text-sm text-[color:var(--text-secondary)]">
+                  Nothing matches "{searchQuery}" yet. Try searching for a different app.
+                </div>
+              )}
             </div>
           </div>
-        )}
+        </div>
       </div>
     </>
   );

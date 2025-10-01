@@ -1,237 +1,216 @@
-# Fedora OS Portfolio - Next.js
+```
+ ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+█                                                                    █
+█  ██████  ██████  ██████        ██ ███████  ██████ ████████        █
+█  ██   ██ ██   ██ ██   ██       ██ ██      ██         ██           █
+█  ██████  ██████  ██   ██       ██ █████   ██         ██           █
+█  ██      ██   ██ ██   ██ ██    ██ ██      ██         ██           █
+█  ██      ██   ██ ██████   ██████  ███████  ██████    ██           █
+█                                                                    █
+█  ███    ██ ███████ ██   ██ ████████       ██████  ███████         █
+█  ████   ██ ██       ██ ██     ██         ██    ██ ██              █
+█  ██ ██  ██ █████     ███      ██         ██    ██ ███████         █
+█  ██  ██ ██ ██       ██ ██     ██         ██    ██      ██         █
+█  ██   ████ ███████ ██   ██    ██          ██████  ███████         █
+█                                                                    █
+ ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+```
 
-A modern, interactive desktop environment built with Next.js 14, featuring a Fedora Linux-inspired design. This portfolio application simulates a complete desktop OS experience with draggable windows, a functional terminal, file explorer, and a code editor that integrates with GitHub repositories.
+# Project Next OS
 
-## 🌟 Features
+A modern, beautiful desktop operating system interface built with **Next.js 15**, **TypeScript**, and **Tailwind CSS v4**. Experience the future of web-based desktop environments with smooth animations, glassmorphism design, and a complete windowing system.
 
-### Desktop Environment
-- **Authentic Fedora Desktop**: Complete GNOME-style interface with top bar, dock, and desktop icons
-- **Real-time System Info**: Live clock, system status widgets, and weather display
-- **Interactive Desktop Icons**: Double-click to open applications
+![Desktop Demo](./public/screenshots/desktop-demo.png)
 
-### Window Management System
-- **Draggable Windows**: Full mouse support for window positioning
-- **Resizable Windows**: Resize windows using the bottom-right handle
-- **Window Controls**: Minimize, maximize/restore, and close functionality
-- **Multi-Window Support**: Run multiple applications simultaneously
-- **Focus Management**: Click to bring windows to front
-- **Window Animations**: Smooth open/close animations
+## ✨ Features
 
-### Applications
+### 🖥️ **Complete Desktop Environment**
+- **Dynamic Window Management** - Drag, resize, minimize, maximize, and focus windows
+- **Smooth Dock Animation** - macOS-inspired dock with buttery-smooth hover effects
+- **Desktop Icons** - Interactive file and application shortcuts
+- **Top Bar with System Controls** - Time, date, system status, and quick controls
 
-#### 🗂️ Portfolio App
-- **Project Showcase**: Display your projects with descriptions, tech stacks, and links
-- **Responsive Cards**: Clean, professional project presentation
-- **Skills Section**: Organized by frontend, backend, and tools
-- **GitHub Integration**: Direct links to code repositories
+### 🎨 **Modern Design System**
+- **Glassmorphism UI** - Beautiful translucent surfaces with backdrop blur
+- **Dark/Light Theme** - Seamless theme switching with smooth transitions
+- **Responsive Layout** - Adapts to different screen sizes and orientations
+- **Consistent Typography** - Inter Variable font with carefully crafted hierarchy
 
-#### 💻 Terminal Simulator
-- **Interactive Commands**: Full command-line interface simulation
-- **Command History**: Navigate through previous commands with arrow keys
-- **Built-in Commands**:
-  - `help` - Show available commands
-  - `clear` - Clear terminal screen
-  - `echo` - Display text
-  - `whoami` - Show current user
-  - `date` - Display current date/time
-  - `neofetch` - System information with ASCII art
-  - `projects` - List all portfolio projects
-  - `cat project-readme <name>` - Show project README content
-- **Authentic Styling**: Green-on-black terminal theme
+### 📱 **Built-in Applications**
+- **📁 Files** - File browser and management
+- **💼 Portfolio** - Showcase projects and skills
+- **⚡ Terminal** - Interactive command-line interface
+- **💻 Code Editor** - Syntax highlighting and GitHub integration
+- **⚙️ Settings** - System preferences and customization
+- **📊 System Monitor** - Performance and resource monitoring
 
-#### 📝 Code Editor
-- **GitHub Repository Integration**: Browse and view files from any public repository
-- **File Explorer**: Navigate repository structure with expandable folders
-- **Syntax Highlighting**: File type detection and appropriate styling
-- **Real-time Loading**: Fetch file contents on-demand from GitHub API
+### 🌟 **System Features**
+- **GNOME Calendar Panel** - Integrated calendar with event management
+- **Control Center** - Quick access to system controls and settings
+- **Activities Overview** - Application launcher and workspace management
+- **GitHub Integration** - Browse and edit repositories directly in the browser
 
-#### 📁 Files App
-- **File Browser**: Navigate through filesystem simulation
-- **Multiple Views**: List and grid view options
-- **File Operations**: Basic file management interface
-- **Sidebar Navigation**: Quick access to common locations
+## 🚀 Quick Start
 
-## 🛠️ Technical Architecture
+### Prerequisites
+- **Node.js 18+** and **npm**
+- **Git** for cloning the repository
 
-### Tech Stack
-- **Framework**: Next.js 14 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **State Management**: React Context API
-- **Icons**: Lucide React
-- **Deployment**: Vercel-ready
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/project-next-os.git
+cd project-next-os
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) to see your desktop environment!
+
+### Production Build
+
+```bash
+# Build for production
+npm run build
+
+# Start production server
+npm start
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Create a `.env.local` file in the root directory:
+
+```env
+# GitHub API token for Code Editor features (optional)
+GITHUB_TOKEN=your_github_token_here
+
+# Next.js environment
+NODE_ENV=production
+```
+
+### Customization
+
+The desktop environment is highly customizable through:
+
+- **Theme Variables** - Modify colors in `src/app/globals.css`
+- **Desktop Icons** - Edit `src/components/system/Desktop.tsx`
+- **Dock Applications** - Update `src/components/system/Dock.tsx`
+- **Window Behavior** - Customize `src/context/DesktopContext.tsx`
+
+## 🏗️ Architecture
+
+### Core Technologies
+- **⚡ Next.js 15** - React framework with App Router
+- **📘 TypeScript** - Type-safe development
+- **🎨 Tailwind CSS v4** - Utility-first styling with CSS variables
+- **🎭 Framer Motion** - Smooth animations and gestures
 
 ### Project Structure
 ```
 src/
-├── app/
-│   ├── api/github/          # GitHub API integration routes
-│   ├── globals.css          # Global styles and animations
-│   ├── layout.tsx           # Root layout with metadata
-│   └── page.tsx             # Main application entry point
+├── app/                    # Next.js App Router
+│   ├── globals.css        # Global styles and theme system
+│   └── page.tsx          # Main desktop entry point
 ├── components/
-│   ├── apps/                # Application components
-│   │   ├── CodeEditor.tsx   # GitHub-integrated code viewer
-│   │   ├── Files.tsx        # File manager interface
-│   │   ├── Portfolio.tsx    # Portfolio showcase
-│   │   └── Terminal.tsx     # Interactive terminal
-│   └── system/              # Desktop system components
-│       ├── AppContent.tsx   # App routing within windows
-│       ├── Desktop.tsx      # Main desktop environment
-│       ├── Dock.tsx         # Application launcher dock
-│       ├── TopBar.tsx       # System status bar
-│       └── Window.tsx       # Draggable window component
+│   ├── apps/             # Desktop applications
+│   │   ├── Portfolio.tsx
+│   │   ├── Terminal.tsx
+│   │   ├── CodeEditor.tsx
+│   │   └── ...
+│   └── system/           # System UI components
+│       ├── Desktop.tsx
+│       ├── Window.tsx
+│       ├── Dock.tsx
+│       └── ...
 ├── context/
-│   └── DesktopContext.tsx   # Global state management
-└── lib/
-    ├── github.ts            # GitHub API utilities
-    └── projects.ts          # Portfolio project data
+│   └── DesktopContext.tsx # Global state management
+└── lib/                  # Utilities and helpers
 ```
 
-### Key Components
+### Key Design Principles
+- **Performance First** - GPU-accelerated animations and optimized rendering
+- **Accessibility** - Keyboard navigation and screen reader support
+- **Responsive Design** - Works on desktop, tablet, and mobile devices
+- **Type Safety** - Comprehensive TypeScript coverage
 
-#### DesktopContext
-- Global state management for all windows
-- Window lifecycle management (create, focus, close, minimize)
-- Window positioning and sizing state
-- TypeScript interfaces for type safety
+## 🎨 Design System
 
-#### Window System
-- Generic window component for all applications
-- Drag and drop functionality with mouse event handling
-- Resize capability with boundary detection
-- Window stacking with z-index management
+### Color Palette
+The design system uses CSS custom properties for consistent theming:
 
-#### GitHub Integration
-- Server-side API routes for security
-- Repository tree fetching and navigation
-- File content retrieval with proper encoding handling
-- Error handling for private/missing repositories
+```css
+/* Light Theme */
+--background: #dae4ff;
+--surface: #fcfdff;
+--accent: #3067ff;
+--text-primary: #0b1631;
 
-## 🚀 Getting Started
+/* Dark Theme */
+--background: #060d1f;
+--surface: #101728;
+--accent: #5aa4ff;
+--text-primary: #f3f6ff;
+```
 
-### Prerequisites
-- Node.js 18.17 or later
-- npm or yarn package manager
+### Typography
+- **Primary Font**: Inter Variable
+- **Monospace Font**: JetBrains Mono
+- **Scale**: Carefully crafted type scale from 12px to 36px
 
-### Installation
+### Spacing
+- **Base Unit**: 4px (0.25rem)
+- **Scale**: xs(4px), sm(8px), md(16px), lg(24px), xl(32px), 2xl(48px), 3xl(64px)
 
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd project-next-os
-   ```
+## 🚀 Deployment
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+### Vercel (Recommended)
 
-3. **Set up environment variables (optional):**
-   Create a `.env.local` file for GitHub API token:
-   ```env
-   GITHUB_TOKEN=your_github_personal_access_token
-   ```
-   > This enables higher rate limits and access to private repositories
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/project-next-os)
 
-4. **Run the development server:**
-   ```bash
-   npm run dev
-   ```
-
-5. **Open your browser:**
-   Navigate to [http://localhost:3000](http://localhost:3000)
-
-### Building for Production
+### Manual Deployment
 
 ```bash
-# Build the application
+# Build the project
 npm run build
 
-# Start production server
-npm run start
+# Deploy the .next folder to your hosting provider
 ```
 
-## 🎨 Customization
-
-### Adding New Projects
-Edit `src/lib/projects.ts` to add your portfolio projects:
-
-```typescript
-{
-  name: "Your Project Name",
-  description: "Project description",
-  techStack: ["React", "Node.js", "MongoDB"],
-  githubUrl: "https://github.com/username/repo",
-  liveUrl: "https://your-project.com" // Optional
-}
-```
-
-### Styling Customization
-- **Colors**: Modify Tailwind classes in components
-- **Animations**: Update CSS in `src/app/globals.css`
-- **Layout**: Adjust component positioning in `Desktop.tsx`
-
-### Adding New Applications
-1. Create component in `src/components/apps/`
-2. Add to `AppContent.tsx` routing
-3. Register in `Dock.tsx` apps array
-
-## 📱 Browser Support
-
-- **Chrome/Edge**: Full support
-- **Firefox**: Full support  
-- **Safari**: Full support
-- **Mobile**: Responsive design (touch interactions may vary)
-
-## 🔧 Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `GITHUB_TOKEN` | GitHub Personal Access Token | Optional* |
-
-*Required for private repositories and higher API rate limits
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch: `git checkout -b feature/new-feature`
-3. Commit your changes: `git commit -m 'Add new feature'`
-4. Push to the branch: `git push origin feature/new-feature`
-5. Open a Pull Request
+### Environment Setup
+- Set `GITHUB_TOKEN` in your deployment environment for full GitHub integration
+- Ensure Node.js 18+ is available on your hosting platform
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
-## 🎯 Performance Optimizations
+## 🤝 Contributing
 
-- **Code Splitting**: Next.js automatic code splitting by route
-- **Image Optimization**: Next.js Image component for optimal loading
-- **API Caching**: GitHub API responses cached for 1 hour
-- **Static Generation**: Pre-rendered pages for faster loading
-- **Bundle Analysis**: Optimized bundle size with tree shaking
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
-## 🐛 Known Issues
+### Development Guidelines
+1. Follow the existing code style and conventions
+2. Add TypeScript types for all new code
+3. Test your changes across different browsers and devices
+4. Update documentation as needed
 
-- Window dragging near screen edges may need refinement
-- Mobile touch interactions could be improved
-- Some terminal commands are simulated (not connected to real shell)
+## 📞 Support
 
-## 🔮 Future Enhancements
-
-- [ ] Settings application for theme customization
-- [ ] Multiple desktop workspaces
-- [ ] Notification system
-- [ ] More terminal commands and shell scripting
-- [ ] File upload/download functionality
-- [ ] Real-time collaboration features
-- [ ] PWA support for offline usage
-
-## 📧 Contact
-
-For questions, suggestions, or collaboration opportunities, please reach out through the portfolio contact form or GitHub issues.
+If you have any questions or need help, please:
+- Open an issue on GitHub
+- Check the existing documentation
+- Review the code comments for implementation details
 
 ---
 
-**Built with ❤️ using Next.js and modern web technologies**
+**Made with ❤️ using Next.js 15, TypeScript, and Tailwind CSS v4**
+
+*Experience the future of desktop computing in your browser.*

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Wifi, Volume2, Battery, ChevronDown } from 'lucide-react';
+import { Wifi, Volume2, Battery } from 'lucide-react';
 import { useDesktop } from '@/context/DesktopContext';
 import CalendarPanel from './CalendarPanel';
 import ControlCenter from './ControlCenter';
@@ -30,58 +30,70 @@ export default function TopBar() {
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 h-12 bg-black/60 backdrop-blur-xl z-50 flex items-center justify-between px-6 text-white border-b border-white/10">
-      {/* Left Section */}
-      <div className="flex items-center">
-        <button 
-          onClick={toggleActivities}
-          className="hover:bg-white/15 px-4 py-2 rounded-xl transition-all duration-200 font-medium"
-        >
-          Activities
-        </button>
+    <>
+      <div className="pointer-events-none fixed top-0 left-0 right-0 z-50">
+        <div className="w-full">
+          <div className="top-bar-modern">
+            {/* Left Section */}
+            <button
+              onClick={toggleActivities}
+              className={`group flex items-center gap-2 rounded-lg border border-transparent px-3 py-1.5 font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 ${
+                showActivities
+                  ? 'bg-accent-soft text-primary border-accent-border'
+                  : 'text-secondary hover:bg-surface-hover hover:text-primary'
+              }`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full transition-all duration-200 ${
+                  showActivities
+                    ? 'bg-accent shadow-[0_0_0_3px_var(--accent-soft)]'
+                    : 'bg-muted group-hover:bg-accent'
+                }`}
+              />
+              Activities
+            </button>
+
+            {/* Center Section - Clock */}
+            <button
+              onClick={toggleCalendar}
+              className={`rounded-lg border border-transparent px-4 py-1.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 ${
+                showCalendar
+                  ? 'border-accent-border bg-surface-hover text-primary shadow-sm'
+                  : 'text-primary hover:bg-surface-hover'
+              }`}
+            >
+              {formatTime(time)}
+            </button>
+
+            {/* Right Section - System Status */}
+            <button
+              onClick={toggleControlCenter}
+              className={`flex items-center gap-3 rounded-lg border border-transparent px-3 py-1.5 font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 ${
+                showControlCenter
+                  ? 'border-accent-border bg-accent-soft text-primary'
+                  : 'text-secondary hover:bg-surface-hover hover:text-primary'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <Wifi className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline text-xs">Wi-Fi</span>
+              </span>
+              <span className="hidden items-center gap-2 sm:flex">
+                <Volume2 className="h-3.5 w-3.5" />
+                <span className="text-xs">48%</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <Battery className="h-3.5 w-3.5" />
+                <span className="text-xs">87%</span>
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Center Section - Clock */}
-      <button 
-        onClick={toggleCalendar}
-        className="flex items-center space-x-2 px-4 py-2 rounded-xl hover:bg-white/15 transition-all duration-200"
-      >
-        <span className="font-semibold text-base">
-          {formatTime(time)}
-        </span>
-        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
-          showCalendar ? 'rotate-180' : ''
-        }`} />
-      </button>
-
-      {/* Right Section - System Status */}
-      <button 
-        onClick={toggleControlCenter}
-        className="flex items-center space-x-4 px-4 py-2 rounded-xl hover:bg-white/15 transition-all duration-200"
-      >
-        <div className="flex items-center space-x-2">
-          <Wifi className="w-5 h-5" />
-        </div>
-        <div className="flex items-center space-x-2">
-          <Volume2 className="w-5 h-5" />
-        </div>
-        <div className="flex items-center space-x-2">
-          <Battery className="w-5 h-5" />
-          <span className="text-sm font-medium">87%</span>
-        </div>
-        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
-          showControlCenter ? 'rotate-180' : ''
-        }`} />
-      </button>
-
-      {/* Calendar Panel */}
       <CalendarPanel isVisible={showCalendar} />
-
-      {/* Control Center Panel */}
       <ControlCenter isVisible={showControlCenter} />
-
-      {/* Activities Panel */}
       <ActivitiesPanel isVisible={showActivities} />
-    </div>
+    </>
   );
 }

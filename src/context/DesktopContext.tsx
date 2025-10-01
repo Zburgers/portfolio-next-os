@@ -26,6 +26,9 @@ interface DesktopState {
   showCalendar: boolean;
   showControlCenter: boolean;
   showActivities: boolean;
+  wifiEnabled: boolean;
+  bluetoothEnabled: boolean;
+  airplaneMode: boolean;
 }
 
 type DesktopAction = 
@@ -37,7 +40,10 @@ type DesktopAction =
   | { type: 'TOGGLE_CALENDAR' }
   | { type: 'TOGGLE_CONTROL_CENTER' }
   | { type: 'TOGGLE_ACTIVITIES' }
-  | { type: 'CLOSE_PANELS' };
+  | { type: 'CLOSE_PANELS' }
+  | { type: 'SET_WIFI'; enabled: boolean }
+  | { type: 'SET_BLUETOOTH'; enabled: boolean }
+  | { type: 'SET_AIRPLANE_MODE'; enabled: boolean };
 
 interface DesktopContextType extends DesktopState {
   openWindow: (appType: string, title: string, payload?: any) => void;
@@ -49,6 +55,9 @@ interface DesktopContextType extends DesktopState {
   toggleControlCenter: () => void;
   toggleActivities: () => void;
   closePanels: () => void;
+  setWifiEnabled: (enabled: boolean) => void;
+  setBluetoothEnabled: (enabled: boolean) => void;
+  setAirplaneMode: (enabled: boolean) => void;
 }
 
 const DesktopContext = createContext<DesktopContextType | undefined>(undefined);
@@ -72,20 +81,24 @@ const initialState: DesktopState = {
   showCalendar: false,
   showControlCenter: false,
   showActivities: false,
+  wifiEnabled: true,
+  bluetoothEnabled: true,
+  airplaneMode: false,
 };
 
 function desktopReducer(state: DesktopState, action: DesktopAction): DesktopState {
   switch (action.type) {
     case 'OPEN_WINDOW': {
       const maxZ = state.windows.reduce((max, w) => Math.max(max, w.zIndex), 0);
+      const stackOffset = (state.nextId - 1) * 28;
       const newWindow: Window = {
         id: state.nextId,
         type: action.appType,
         title: action.title,
-        x: 100 + (state.nextId - 1) * 40,
-        y: 100 + (state.nextId - 1) * 40,
-        width: 800,
-        height: 600,
+        x: 220 + stackOffset,
+        y: 160 + stackOffset,
+        width: 920,
+        height: 620,
         zIndex: maxZ + 1,
         minimized: false,
         maximized: false,
@@ -99,6 +112,7 @@ function desktopReducer(state: DesktopState, action: DesktopAction): DesktopStat
         nextId: state.nextId + 1,
         showCalendar: false,
         showControlCenter: false,
+        showActivities: false,
       };
     }
 
@@ -179,6 +193,32 @@ function desktopReducer(state: DesktopState, action: DesktopAction): DesktopStat
       };
     }
 
+    case 'SET_WIFI': {
+      return {
+        ...state,
+        wifiEnabled: action.enabled,
+        airplaneMode: action.enabled ? state.airplaneMode : state.airplaneMode,
+      };
+    }
+
+    case 'SET_BLUETOOTH': {
+      return {
+        ...state,
+        bluetoothEnabled: action.enabled,
+        airplaneMode: action.enabled ? state.airplaneMode : state.airplaneMode,
+      };
+    }
+
+    case 'SET_AIRPLANE_MODE': {
+      const enabled = action.enabled;
+      return {
+        ...state,
+        airplaneMode: enabled,
+        wifiEnabled: enabled ? false : state.wifiEnabled,
+        bluetoothEnabled: enabled ? false : state.bluetoothEnabled,
+      };
+    }
+
     default:
       return state;
   }
@@ -233,6 +273,18 @@ export function DesktopProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'CLOSE_PANELS' });
   };
 
+  const setWifiEnabled = (enabled: boolean) => {
+    dispatch({ type: 'SET_WIFI', enabled });
+  };
+
+  const setBluetoothEnabled = (enabled: boolean) => {
+    dispatch({ type: 'SET_BLUETOOTH', enabled });
+  };
+
+  const setAirplaneMode = (enabled: boolean) => {
+    dispatch({ type: 'SET_AIRPLANE_MODE', enabled });
+  };
+
   // Initialize theme on mount
   useEffect(() => {
     const initialTheme = getInitialTheme();
@@ -250,6 +302,9 @@ export function DesktopProvider({ children }: { children: ReactNode }) {
     toggleControlCenter,
     toggleActivities,
     closePanels,
+    setWifiEnabled,
+    setBluetoothEnabled,
+    setAirplaneMode,
   };
 
   return (

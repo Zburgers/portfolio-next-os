@@ -21,12 +21,18 @@ interface ControlCenterProps {
 }
 
 export default function ControlCenter({ isVisible }: ControlCenterProps) {
-  const { closePanels, openWindow } = useDesktop();
+  const {
+    closePanels,
+    openWindow,
+    wifiEnabled,
+    bluetoothEnabled,
+    airplaneMode,
+    setWifiEnabled,
+    setBluetoothEnabled,
+    setAirplaneMode,
+  } = useDesktop();
   const [volume, setVolume] = useState(85);
   const [brightness, setBrightness] = useState(70);
-  const [wifiEnabled, setWifiEnabled] = useState(true);
-  const [bluetoothEnabled, setBluetoothEnabled] = useState(true);
-  const [airplaneMode, setAirplaneMode] = useState(false);
 
   if (!isVisible) return null;
 
@@ -85,7 +91,14 @@ export default function ControlCenter({ isVisible }: ControlCenterProps) {
 
               {/* Airplane Mode */}
               <button
-                onClick={() => setAirplaneMode(!airplaneMode)}
+                onClick={() => {
+                  const next = !airplaneMode;
+                  setAirplaneMode(next);
+                  if (next) {
+                    setWifiEnabled(false);
+                    setBluetoothEnabled(false);
+                  }
+                }}
                 className={`h-20 rounded-xl flex flex-col items-center justify-center space-y-2 transition-all duration-200 ${
                   airplaneMode 
                     ? 'bg-accent text-white shadow-lg' 

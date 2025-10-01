@@ -7,6 +7,7 @@ import Terminal from '@/components/apps/Terminal';
 import CodeEditor from '@/components/apps/CodeEditor';
 import Files from '@/components/apps/Files';
 import Settings from '@/components/apps/Settings';
+import TextEditor from '@/components/apps/TextEditor';
 
 interface AppContentProps {
   window: WindowType;
@@ -35,6 +36,9 @@ export default function AppContent({ window }: AppContentProps) {
     
     case 'settings':
       return <Settings />;
+    
+    case 'text-editor':
+      return <TextEditor />;
     
     default:
       return (
