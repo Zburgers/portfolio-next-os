@@ -774,7 +774,7 @@ export default function Portfolio() {
                 title="Open Source Developer"
                 organization="Youth Season of Code"
                 date="2025 – Present"
-                description="Selected for a global 6-month open-source program. Actively maintaining repositories, managing CI/CD lifecycles with GitHub Actions, and resolving issues on PyPI packages."
+                description="Selected for a global 6-month open-source program. Actively contributing to meaningful open-source projects, maintaining repositories, and managing CI/CD lifecycles with GitHub Actions."
                 tags={['Open Source', 'GitHub Actions', 'CI/CD', 'Python']}
               />
               

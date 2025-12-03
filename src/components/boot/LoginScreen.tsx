@@ -139,15 +139,6 @@ export default function LoginScreen() {
                 <div className="w-2 h-2 rounded-full bg-white" />
               </div>
             </div>
-
-            {/* Click hint on hover */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="absolute -bottom-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <span className="text-xs text-gray-400">Click to login</span>
-            </motion.div>
           </motion.button>
 
           {/* User Info */}
