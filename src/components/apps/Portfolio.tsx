@@ -53,7 +53,7 @@ const GlassCard = ({
 };
 
 // Certification Modal Component
-const CertificationModal = ({ cert, onClose }: { cert: { title: string; issuer: string; icon: string; description: string }; onClose: () => void }) => {
+const CertificationModal = ({ cert, onClose }: { cert: { title: string; issuer: string; icon: string; description: string; date?: string; credentialId?: string }; onClose: () => void }) => {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div 
@@ -69,8 +69,14 @@ const CertificationModal = ({ cert, onClose }: { cert: { title: string; issuer: 
         <div className="text-center">
           <div className="text-6xl mb-4 animate-bounce">{cert.icon}</div>
           <h3 className="text-xl font-bold mb-1">{cert.title}</h3>
-          <p className="text-sm text-[var(--accent)] mb-4 font-medium">{cert.issuer}</p>
-          <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{cert.description}</p>
+          <p className="text-sm text-[var(--accent)] font-medium">{cert.issuer}</p>
+          {cert.date && <p className="text-xs text-[var(--text-muted)] mb-2">{cert.date}</p>}
+          {cert.credentialId && (
+            <p className="text-xs text-[var(--text-muted)] mb-3 font-mono bg-[var(--surface-muted)] px-2 py-1 rounded inline-block">
+              ID: {cert.credentialId}
+            </p>
+          )}
+          <p className="text-sm text-[var(--text-secondary)] leading-relaxed mt-3">{cert.description}</p>
         </div>
       </div>
     </div>
@@ -299,31 +305,44 @@ const ExperienceItem = ({
   );
 };
 
-// Certification data - only 4 real ones
+// Certification data - 5 real certifications from resume
 const certifications = [
+  {
+    title: 'PyTorch and Deep Learning for Decision Makers (LFS116)',
+    issuer: 'The Linux Foundation',
+    date: 'Dec 2025',
+    credentialId: 'LF-d5jzp5xcoc',
+    icon: '🔥',
+    description: 'Comprehensive PyTorch course covering neural network fundamentals, deep learning architectures, and practical implementation for business decision-making.'
+  },
+  {
+    title: 'Prompt Design in Vertex AI Skill Badge',
+    issuer: 'Google Cloud',
+    date: 'Dec 2025',
+    icon: '☁️',
+    description: 'Advanced prompt engineering techniques for Google Cloud\'s Vertex AI, including few-shot learning, chain-of-thought prompting, and model optimization.'
+  },
   {
     title: 'Machine Learning with Python',
     issuer: 'freeCodeCamp',
-    icon: '🎓',
-    description: 'Comprehensive course covering machine learning algorithms, data preprocessing, model training, and evaluation using Python and scikit-learn.'
+    date: 'Dec 2025',
+    credentialId: 'zburgers-mlwp',
+    icon: '🤖',
+    description: 'Built 5 ML projects including a Neural Network SMS Classifier and a Book Recommendation Engine using KNN algorithms.'
   },
   {
-    title: 'Deep Learning for Decision Makers',
-    issuer: 'Linux Foundation',
-    icon: '🧠',
-    description: 'Strategic overview of deep learning concepts, neural network architectures, and practical applications for business decision-making.'
+    title: 'Responsible and Safe AI Systems',
+    issuer: 'NPTEL',
+    date: 'Nov 2025',
+    icon: '🛡️',
+    description: 'Ethics-focused certification covering AI safety, bias mitigation, responsible deployment, and governance frameworks for artificial intelligence systems.'
   },
   {
-    title: 'Prompt Design in Vertex AI',
-    issuer: 'Google Cloud',
-    icon: '☁️',
-    description: 'Advanced prompt engineering techniques for Google Cloud\'s Vertex AI, including few-shot learning, chain-of-thought, and model fine-tuning.'
-  },
-  {
-    title: 'Python for Data Science',
-    issuer: 'Coursera',
-    icon: '🐍',
-    description: 'Data manipulation with pandas, visualization with matplotlib, and statistical analysis using Python.'
+    title: 'Blockchain and its Applications',
+    issuer: 'NPTEL',
+    date: 'Jan 2025',
+    icon: '⛓️',
+    description: 'Fundamentals of blockchain technology, distributed ledger systems, smart contracts, and real-world applications across industries.'
   }
 ];
 
@@ -396,6 +415,7 @@ const EducationTab = () => {
               <div className="relative z-10">
                 <span className="block text-sm font-semibold line-clamp-2 group-hover:text-[var(--accent)] transition-colors">{cert.title}</span>
                 <span className="text-xs text-[var(--text-muted)]">{cert.issuer}</span>
+                <span className="text-xs text-[var(--accent)] block mt-1">{cert.date}</span>
               </div>
             </button>
           ))}
