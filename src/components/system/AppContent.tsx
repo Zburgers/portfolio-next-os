@@ -8,6 +8,7 @@ import CodeEditor from '@/components/apps/CodeEditor';
 import Files from '@/components/apps/Files';
 import Settings from '@/components/apps/Settings';
 import TextEditor from '@/components/apps/TextEditor';
+import WelcomeApp from '@/components/apps/WelcomeApp';
 
 interface AppContentProps {
   window: WindowType;
@@ -39,6 +40,9 @@ export default function AppContent({ window }: AppContentProps) {
     
     case 'text-editor':
       return <TextEditor />;
+    
+    case 'welcome':
+      return <WelcomeApp />;
     
     default:
       return (

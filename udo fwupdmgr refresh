@@ -1,0 +1,91 @@
+Oct 08 04:57:20 naki kernel: [0;1;31m[0;1;39m[0;1;31mx86/cpu: VMX (outside TXT) disabled by BIOS[0m
+Oct 08 04:57:20 naki kernel: [0;1;31m[0;1;39m[0;1;31mx86/cpu: SGX disabled or unsupported by BIOS.[0m
+Oct 08 04:57:20 naki kernel: [0;1;31m[0;1;39m[0;1;31mACPI BIOS Error (bug): AE_AML_BUFFER_LIMIT, Field [CAP1] at bit offset/length 64/32 exceeds size of target Buffer (64 bits) (20250404/dsopcode-198)[0m
+Oct 08 04:57:20 naki kernel: [0;1;31m[0;1;39m[0;1;31mACPI Error: Aborting method \_SB._OSC due to previous error (AE_AML_BUFFER_LIMIT) (20250404/psparse-529)[0m
+Oct 08 04:57:27 naki kernel: [0;1;31m[0;1;39m[0;1;31msnd_hda_codec_conexant hdaudioC0D0: vmaster hook already present before cdev![0m
+Oct 08 04:57:27 naki (irewalld)[1872]: [0;1;31m[0;1;39m[0;1;31mfirewalld.service: Failed to execute /usr/bin/firewalld: Permission denied[0m
+Oct 08 04:57:27 naki (irewalld)[1872]: [0;1;31m[0;1;39m[0;1;31mfirewalld.service: Failed at step EXEC spawning /usr/bin/firewalld: Permission denied[0m
+[0;38;5;245m░░ [0m[0;32mSubject: Process /usr/bin/firewalld could not be executed[0m
+[0;38;5;245m░░[0m [0;32mDefined-By: systemd[0m
+[0;38;5;245m░░[0m [0;32mSupport: https://lists.freedesktop.org/mailman/listinfo/systemd-devel[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe process /usr/bin/firewalld could not be executed and failed.[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe error number returned by this process is 13.[0m
+Oct 08 04:57:27 naki systemd[1]: [0;1;31m[0;1;39m[0;1;31mFailed to start firewalld.service - firewalld - dynamic firewall daemon.[0m
+[0;38;5;245m░░ [0m[0;32mSubject: A start job for unit firewalld.service has failed[0m
+[0;38;5;245m░░[0m [0;32mDefined-By: systemd[0m
+[0;38;5;245m░░[0m [0;32mSupport: https://lists.freedesktop.org/mailman/listinfo/systemd-devel[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mA start job for unit firewalld.service has finished with a failure.[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe job identifier is 375 and the job result is failed.[0m
+Oct 08 04:57:28 naki abrtd[1785]: [0;1;31m[0;1;39m[0;1;31m'/var/spool/abrt/ccpp-2025-10-08-03:13:36.505544-2796.new' is not a problem directory[0m
+Oct 08 04:57:28 naki kernel: [0;1;31m[0;1;39m[0;1;31mBluetooth: hci0: Reading supported features failed (-16)[0m
+Oct 08 04:57:28 naki bluetoothd[1591]: [0;1;31m[0;1;39m[0;1;31mFailed to set mode: Failed (0x03)[0m
+Oct 08 04:57:28 naki (python3)[2321]: [0;1;31m[0;1;39m[0;1;31mme.proton.vpn.split_tunneling.service: Failed at step EXEC spawning /usr/bin/python3: Permission denied[0m
+[0;38;5;245m░░ [0m[0;32mSubject: Process /usr/bin/python3 could not be executed[0m
+[0;38;5;245m░░[0m [0;32mDefined-By: systemd[0m
+[0;38;5;245m░░[0m [0;32mSupport: https://lists.freedesktop.org/mailman/listinfo/systemd-devel[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe process /usr/bin/python3 could not be executed and failed.[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe error number returned by this process is 13.[0m
+Oct 08 04:57:28 naki (tuned)[2334]: [0;1;31m[0;1;39m[0;1;31mtuned.service: Failed to execute /usr/sbin/tuned: Permission denied[0m
+Oct 08 04:57:28 naki (tuned)[2334]: [0;1;31m[0;1;39m[0;1;31mtuned.service: Failed at step EXEC spawning /usr/sbin/tuned: Permission denied[0m
+[0;38;5;245m░░ [0m[0;32mSubject: Process /usr/sbin/tuned could not be executed[0m
+[0;38;5;245m░░[0m [0;32mDefined-By: systemd[0m
+[0;38;5;245m░░[0m [0;32mSupport: https://lists.freedesktop.org/mailman/listinfo/systemd-devel[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe process /usr/sbin/tuned could not be executed and failed.[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe error number returned by this process is 13.[0m
+Oct 08 04:57:28 naki systemd[1]: [0;1;31m[0;1;39m[0;1;31mFailed to start me.proton.vpn.split_tunneling.service - Proton VPN Daemon.[0m
+[0;38;5;245m░░ [0m[0;32mSubject: A start job for unit me.proton.vpn.split_tunneling.service has failed[0m
+[0;38;5;245m░░[0m [0;32mDefined-By: systemd[0m
+[0;38;5;245m░░[0m [0;32mSupport: https://lists.freedesktop.org/mailman/listinfo/systemd-devel[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mA start job for unit me.proton.vpn.split_tunneling.service has finished with a failure.[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe job identifier is 386 and the job result is failed.[0m
+Oct 08 04:57:28 naki systemd[1]: [0;1;31m[0;1;39m[0;1;31mFailed to start tuned.service - Dynamic System Tuning Daemon.[0m
+[0;38;5;245m░░ [0m[0;32mSubject: A start job for unit tuned.service has failed[0m
+[0;38;5;245m░░[0m [0;32mDefined-By: systemd[0m
+[0;38;5;245m░░[0m [0;32mSupport: https://lists.freedesktop.org/mailman/listinfo/systemd-devel[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mA start job for unit tuned.service has finished with a failure.[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe job identifier is 405 and the job result is failed.[0m
+Oct 08 04:57:28 naki abrtd[1785]: [0;1;31m[0;1;39m[0;1;31m'/var/spool/abrt/ccpp-2025-10-08-03:13:39.360428-23764.new' is not a problem directory[0m
+Oct 08 04:57:28 naki (python3)[2434]: [0;1;31m[0;1;39m[0;1;31mme.proton.vpn.split_tunneling.service: Failed at step EXEC spawning /usr/bin/python3: Permission denied[0m
+[0;38;5;245m░░ [0m[0;32mSubject: Process /usr/bin/python3 could not be executed[0m
+[0;38;5;245m░░[0m [0;32mDefined-By: systemd[0m
+[0;38;5;245m░░[0m [0;32mSupport: https://lists.freedesktop.org/mailman/listinfo/systemd-devel[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe process /usr/bin/python3 could not be executed and failed.[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe error number returned by this process is 13.[0m
+Oct 08 04:57:28 naki systemd[1]: [0;1;31m[0;1;39m[0;1;31mFailed to start me.proton.vpn.split_tunneling.service - Proton VPN Daemon.[0m
+[0;38;5;245m░░ [0m[0;32mSubject: A start job for unit me.proton.vpn.split_tunneling.service has failed[0m
+[0;38;5;245m░░[0m [0;32mDefined-By: systemd[0m
+[0;38;5;245m░░[0m [0;32mSupport: https://lists.freedesktop.org/mailman/listinfo/systemd-devel[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mA start job for unit me.proton.vpn.split_tunneling.service has finished with a failure.[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe job identifier is 2147 and the job result is failed.[0m
+Oct 08 04:57:29 naki (python3)[2497]: [0;1;31m[0;1;39m[0;1;31mme.proton.vpn.split_tunneling.service: Failed at step EXEC spawning /usr/bin/python3: Permission denied[0m
+[0;38;5;245m░░ [0m[0;32mSubject: Process /usr/bin/python3 could not be executed[0m
+[0;38;5;245m░░[0m [0;32mDefined-By: systemd[0m
+[0;38;5;245m░░[0m [0;32mSupport: https://lists.freedesktop.org/mailman/listinfo/systemd-devel[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe process /usr/bin/python3 could not be executed and failed.[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mThe error number returned by this process is 13.[0m
+Oct 08 04:57:29 naki systemd[1]: [0;1;31m[0;1;39m[0;1;31mFailed to start me.proton.vpn.split_tunneling.service - Proton VPN Daemon.[0m
+[0;38;5;245m░░ [0m[0;32mSubject: A start job for unit me.proton.vpn.split_tunneling.service has failed[0m
+[0;38;5;245m░░[0m [0;32mDefined-By: systemd[0m
+[0;38;5;245m░░[0m [0;32mSupport: https://lists.freedesktop.org/mailman/listinfo/systemd-devel[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░░[0m [0;32mA start job for unit me.proton.vpn.split_tunneling.service has finished with a failure.[0m
+[0;38;5;245m░░[0m [0;32m[0m
+[0;38;5;245m░�

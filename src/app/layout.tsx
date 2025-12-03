@@ -9,7 +9,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Fedora OS Portfolio",
   description: "A Fedora-themed desktop environment portfolio built with Next.js",
+  // Ensure Next's metadata resolver has a canonical base to avoid runtime errors
+  // Reads `NEXT_PUBLIC_SITE_URL` at build/runtime when available.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
 };
+
 
 export default function RootLayout({
   children,
