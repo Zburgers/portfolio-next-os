@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   ExternalLink, Github, Mail, MapPin, Code, Award, Users, 
   Play, Briefcase, GraduationCap, Trophy, Sparkles, ArrowRight,
-  Linkedin, Terminal, Zap, Heart, GitBranch, Activity, Star, X
+  Linkedin, Terminal, Zap, Heart, GitBranch, Activity, Star, X,
+  Loader2
 } from 'lucide-react';
 import { projects, Project } from '@/lib/projects';
 import { techIcons, skills, getSkillsByCategory } from '@/lib/tech-icons';
@@ -12,11 +13,53 @@ import { useDesktop } from '@/context/DesktopContext';
 
 type ActiveTab = 'about' | 'projects' | 'skills' | 'experience' | 'education' | 'contact';
 
+const PROFILE_IMAGE = 'https://avatars.githubusercontent.com/u/95270855?v=4';
+const GITHUB_USERNAME = 'Zburgers';
+
+// Glassmorphism Card Component with hover glow effect
+const GlassCard = ({ 
+  children, 
+  className = '', 
+  hover = true,
+  glowColor = 'var(--accent)'
+}: { 
+  children: React.ReactNode; 
+  className?: string;
+  hover?: boolean;
+  glowColor?: string;
+}) => {
+  return (
+    <div 
+      className={`
+        relative rounded-xl border backdrop-blur-sm overflow-hidden
+        bg-[var(--surface)]/80 border-[var(--border)]
+        ${hover ? 'group transition-all duration-300 hover:border-[var(--accent-border)] hover:shadow-xl hover:-translate-y-0.5' : ''}
+        ${className}
+      `}
+    >
+      {/* Glow effect on hover */}
+      {hover && (
+        <div 
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-xl"
+          style={{
+            background: `radial-gradient(400px circle at 50% 50%, ${glowColor}, transparent 60%)`,
+            opacity: 0.15
+          }}
+        />
+      )}
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+};
+
 // Certification Modal Component
 const CertificationModal = ({ cert, onClose }: { cert: { title: string; issuer: string; icon: string; description: string }; onClose: () => void }) => {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl max-w-sm w-full p-6 relative">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div 
+        className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl max-w-sm w-full p-6 relative shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
         <button 
           onClick={onClose}
           className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
@@ -24,17 +67,17 @@ const CertificationModal = ({ cert, onClose }: { cert: { title: string; issuer: 
           <X size={20} />
         </button>
         <div className="text-center">
-          <div className="text-5xl mb-4">{cert.icon}</div>
+          <div className="text-6xl mb-4 animate-bounce">{cert.icon}</div>
           <h3 className="text-xl font-bold mb-1">{cert.title}</h3>
-          <p className="text-sm text-[var(--accent)] mb-4">{cert.issuer}</p>
-          <p className="text-sm text-[var(--text-secondary)]">{cert.description}</p>
+          <p className="text-sm text-[var(--accent)] mb-4 font-medium">{cert.issuer}</p>
+          <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{cert.description}</p>
         </div>
       </div>
     </div>
   );
 };
 
-// Animated skill bar component
+// Animated skill bar component with glow
 const SkillBar = ({ name, icon, proficiency, delay = 0 }: { 
   name: string; 
   icon: string; 
@@ -49,30 +92,82 @@ const SkillBar = ({ name, icon, proficiency, delay = 0 }: {
   }, [proficiency, delay]);
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5 group/skill">
       <div className="flex items-center gap-2">
-        <span className="text-sm">{icon}</span>
+        <span className="text-sm group-hover/skill:scale-110 transition-transform">{icon}</span>
         <span className="flex-1 text-sm font-medium">{name}</span>
         <span className="text-xs font-semibold text-[var(--accent)]">{proficiency}%</span>
       </div>
       <div className="h-2 bg-[var(--surface-muted)] rounded-full overflow-hidden">
         <div 
-          className="h-full rounded-full transition-all duration-700 ease-out"
+          className="h-full rounded-full transition-all duration-700 ease-out relative"
           style={{ 
             width: `${width}%`, 
             transitionDelay: `${delay}ms`,
             background: 'linear-gradient(90deg, var(--accent), #a855f7)'
           }}
-        />
+        >
+          <div className="absolute inset-0 bg-white/20 animate-pulse" />
+        </div>
       </div>
     </div>
   );
 };
 
-// GitHub Stats Card Component
+// GitHub Stats with Real API Data
+interface GitHubStats {
+  publicRepos: number;
+  followers: number;
+  following: number;
+  totalStars: number;
+  loading: boolean;
+  error: boolean;
+}
+
 const GitHubStatsCard = ({ username }: { username: string }) => {
+  const [stats, setStats] = useState<GitHubStats>({
+    publicRepos: 0,
+    followers: 0,
+    following: 0,
+    totalStars: 0,
+    loading: true,
+    error: false
+  });
+
+  useEffect(() => {
+    const fetchGitHubStats = async () => {
+      try {
+        // Fetch user data
+        const userRes = await fetch(`https://api.github.com/users/${username}`);
+        if (!userRes.ok) throw new Error('Failed to fetch user data');
+        const userData = await userRes.json();
+
+        // Fetch repos to calculate stars
+        const reposRes = await fetch(`https://api.github.com/users/${username}/repos?per_page=100`);
+        if (!reposRes.ok) throw new Error('Failed to fetch repos');
+        const reposData = await reposRes.json();
+        
+        const totalStars = reposData.reduce((acc: number, repo: any) => acc + repo.stargazers_count, 0);
+
+        setStats({
+          publicRepos: userData.public_repos,
+          followers: userData.followers,
+          following: userData.following,
+          totalStars,
+          loading: false,
+          error: false
+        });
+      } catch (error) {
+        console.error('Error fetching GitHub stats:', error);
+        setStats(prev => ({ ...prev, loading: false, error: true }));
+      }
+    };
+
+    fetchGitHubStats();
+  }, [username]);
+
   return (
-    <div className="p-6 rounded-xl bg-[var(--surface)] border border-[var(--border)]">
+    <GlassCard className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2 font-semibold">
           <Github size={20} className="text-[var(--accent)]" />
@@ -88,55 +183,63 @@ const GitHubStatsCard = ({ username }: { username: string }) => {
         </a>
       </div>
       
-      {/* GitHub Contribution Graph - Using GitHub's public embed */}
-      <div className="mb-4 p-4 bg-[var(--surface-muted)] rounded-lg overflow-hidden">
-        {/* TODO: Replace with actual GitHub contribution graph widget or API integration */}
+      {/* GitHub Contribution Graph */}
+      <div className="mb-4 p-4 bg-[var(--surface-muted)] rounded-xl overflow-hidden">
         <img 
-          src={`https://ghchart.rshah.org/3067ff/${username}`}
+          src={`https://ghchart.rshah.org/3b82f6/${username}`}
           alt="GitHub Contribution Graph"
           className="w-full rounded"
         />
       </div>
       
-      {/* GitHub Stats Cards */}
+      {/* Real GitHub Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--surface-muted)]">
-          <GitBranch size={18} className="text-[var(--accent)]" />
+        <div className="group flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-muted)] hover:bg-[var(--accent-soft)] transition-all cursor-default">
+          <GitBranch size={18} className="text-[var(--accent)] group-hover:scale-110 transition-transform" />
           <div>
-            <span className="block text-lg font-bold">50+</span>
+            {stats.loading ? (
+              <Loader2 size={18} className="animate-spin text-[var(--accent)]" />
+            ) : (
+              <span className="block text-lg font-bold">{stats.error ? '—' : stats.publicRepos}</span>
+            )}
             <span className="text-xs text-[var(--text-muted)]">Repositories</span>
           </div>
         </div>
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--surface-muted)]">
-          <Star size={18} className="text-yellow-500" />
+        <div className="group flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-muted)] hover:bg-[var(--accent-soft)] transition-all cursor-default">
+          <Star size={18} className="text-yellow-500 group-hover:scale-110 transition-transform" />
           <div>
-            <span className="block text-lg font-bold">100+</span>
+            {stats.loading ? (
+              <Loader2 size={18} className="animate-spin text-[var(--accent)]" />
+            ) : (
+              <span className="block text-lg font-bold">{stats.error ? '—' : stats.totalStars}</span>
+            )}
             <span className="text-xs text-[var(--text-muted)]">Stars Earned</span>
           </div>
         </div>
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--surface-muted)]">
-          <Activity size={18} className="text-green-500" />
+        <div className="group flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-muted)] hover:bg-[var(--accent-soft)] transition-all cursor-default">
+          <Users size={18} className="text-green-500 group-hover:scale-110 transition-transform" />
           <div>
-            <span className="block text-lg font-bold">500+</span>
-            <span className="text-xs text-[var(--text-muted)]">Contributions</span>
+            {stats.loading ? (
+              <Loader2 size={18} className="animate-spin text-[var(--accent)]" />
+            ) : (
+              <span className="block text-lg font-bold">{stats.error ? '—' : stats.followers}</span>
+            )}
+            <span className="text-xs text-[var(--text-muted)]">Followers</span>
           </div>
         </div>
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--surface-muted)]">
-          <Heart size={18} className="text-red-500" />
+        <div className="group flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-muted)] hover:bg-[var(--accent-soft)] transition-all cursor-default">
+          <Heart size={18} className="text-red-500 group-hover:scale-110 transition-transform" />
           <div>
             <span className="block text-lg font-bold">YSoC</span>
             <span className="text-xs text-[var(--text-muted)]">Open Source</span>
           </div>
         </div>
       </div>
-      
-      {/* TODO: Add real-time GitHub API integration for accurate stats */}
-      {/* Requires GITHUB_TOKEN in environment variables */}
-    </div>
+    </GlassCard>
   );
 };
 
-// Experience Item Component
+// Experience Item Component with enhanced styling
 const ExperienceItem = ({ 
   title, 
   organization, 
@@ -158,38 +261,45 @@ const ExperienceItem = ({
     opensource: Github
   };
   const colorMap = {
-    work: 'text-blue-500',
-    education: 'text-purple-500',
-    opensource: 'text-green-500'
+    work: 'from-blue-500 to-blue-600',
+    education: 'from-purple-500 to-purple-600',
+    opensource: 'from-green-500 to-green-600'
+  };
+  const glowMap = {
+    work: 'rgba(59, 130, 246, 0.3)',
+    education: 'rgba(168, 85, 247, 0.3)',
+    opensource: 'rgba(34, 197, 94, 0.3)'
   };
   const Icon = iconMap[type];
-  const color = colorMap[type];
+  const gradient = colorMap[type];
   
   return (
-    <div className="flex gap-4 p-5 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent-border)] hover:shadow-lg transition-all">
-      <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-[var(--surface-muted)] flex items-center justify-center ${color}`}>
-        <Icon size={20} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 mb-2">
-          <div>
-            <h3 className="font-semibold">{title}</h3>
-            <p className="text-sm text-[var(--text-secondary)]">{organization}</p>
+    <GlassCard className="p-5" glowColor={glowMap[type]}>
+      <div className="flex gap-4">
+        <div className={`flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform`}>
+          <Icon size={22} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 mb-2">
+            <div>
+              <h3 className="font-semibold text-lg">{title}</h3>
+              <p className="text-sm text-[var(--accent)]">{organization}</p>
+            </div>
+            <span className="text-xs font-medium text-[var(--accent)] bg-[var(--accent-soft)] px-3 py-1.5 rounded-full whitespace-nowrap border border-[var(--accent-border)]">{date}</span>
           </div>
-          <span className="text-xs font-medium text-[var(--accent)] bg-[var(--accent-soft)] px-2.5 py-1 rounded-full whitespace-nowrap">{date}</span>
-        </div>
-        <p className="text-sm text-[var(--text-muted)] mb-3">{description}</p>
-        <div className="flex flex-wrap gap-2">
-          {tags.map((tag, i) => (
-            <span key={i} className="px-2 py-0.5 text-xs font-medium bg-[var(--surface-muted)] rounded">{tag}</span>
-          ))}
+          <p className="text-sm text-[var(--text-secondary)] mb-3 leading-relaxed">{description}</p>
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tag, i) => (
+              <span key={i} className="px-2.5 py-1 text-xs font-medium bg-[var(--surface-muted)] rounded-full hover:bg-[var(--accent-soft)] transition-colors">{tag}</span>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </GlassCard>
   );
 };
 
-// Certification data
+// Certification data - only 4 real ones
 const certifications = [
   {
     title: 'Machine Learning with Python',
@@ -210,22 +320,10 @@ const certifications = [
     description: 'Advanced prompt engineering techniques for Google Cloud\'s Vertex AI, including few-shot learning, chain-of-thought, and model fine-tuning.'
   },
   {
-    title: 'Introduction to Cloud Computing',
-    issuer: 'IBM',
-    icon: '💻',
-    description: 'Fundamentals of cloud computing including IaaS, PaaS, SaaS models, and cloud architecture patterns.'
-  },
-  {
     title: 'Python for Data Science',
     issuer: 'Coursera',
     icon: '🐍',
     description: 'Data manipulation with pandas, visualization with matplotlib, and statistical analysis using Python.'
-  },
-  {
-    title: 'Git & GitHub Essentials',
-    issuer: 'LinkedIn Learning',
-    icon: '📚',
-    description: 'Version control fundamentals, branching strategies, pull requests, and collaborative development workflows.'
   }
 ];
 
@@ -246,9 +344,9 @@ const EducationTab = () => {
       </div>
       
       {/* B.Tech Card */}
-      <div className="mb-8 p-6 rounded-xl bg-gradient-to-br from-[var(--accent-soft)] to-[var(--surface)] border border-[var(--accent-border)] shadow-lg">
+      <GlassCard className="mb-8 p-6" glowColor="rgba(168, 85, 247, 0.3)">
         <div className="flex items-start gap-4">
-          <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-gradient-to-br from-[var(--accent)] to-purple-500 flex items-center justify-center text-white shadow-lg">
+          <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-gradient-to-br from-[var(--accent)] to-purple-500 flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform">
             <GraduationCap size={32} />
           </div>
           <div className="flex-1">
@@ -261,23 +359,23 @@ const EducationTab = () => {
                 2022 – 2026
               </span>
             </div>
-            <p className="text-sm text-[var(--text-secondary)] mb-3">
+            <p className="text-sm text-[var(--text-secondary)] mb-3 leading-relaxed">
               Specializing in Artificial Intelligence and Data Science with focus on machine learning, 
               deep learning, and cloud computing. Active participant in research projects and hackathons.
             </p>
             <div className="flex flex-wrap gap-2">
               {['Machine Learning', 'Deep Learning', 'Cloud Computing', 'Data Science', 'Python', 'Research'].map((tag, i) => (
-                <span key={i} className="px-2.5 py-1 text-xs font-medium bg-[var(--surface-muted)] rounded-full">
+                <span key={i} className="px-2.5 py-1 text-xs font-medium bg-[var(--surface-muted)] rounded-full hover:bg-[var(--accent-soft)] transition-colors">
                   {tag}
                 </span>
               ))}
             </div>
           </div>
         </div>
-      </div>
+      </GlassCard>
       
       {/* Certifications Section */}
-      <div className="p-5 rounded-xl bg-[var(--surface)] border border-[var(--border)]">
+      <GlassCard className="p-5" hover={false}>
         <h3 className="flex items-center gap-2 font-semibold mb-4 text-lg">
           <Award size={20} className="text-yellow-500" />
           Certifications
@@ -285,22 +383,24 @@ const EducationTab = () => {
         <p className="text-sm text-[var(--text-muted)] mb-4">
           Click on a certification to view more details
         </p>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           {certifications.map((cert, i) => (
             <button
               key={i}
               onClick={() => setSelectedCert(cert)}
-              className="group flex flex-col items-center gap-2 p-4 rounded-xl bg-[var(--surface-muted)] hover:bg-[var(--accent-soft)] hover:border-[var(--accent-border)] border border-transparent transition-all cursor-pointer text-center"
+              className="group flex flex-col items-center gap-3 p-5 rounded-xl bg-[var(--surface-muted)] border border-transparent hover:border-[var(--accent-border)] hover:bg-[var(--accent-soft)] transition-all cursor-pointer text-center relative overflow-hidden"
             >
-              <span className="text-3xl group-hover:scale-110 transition-transform">{cert.icon}</span>
-              <div>
-                <span className="block text-sm font-medium line-clamp-2 group-hover:text-[var(--accent)]">{cert.title}</span>
+              {/* Glow effect */}
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-br from-[var(--accent)]/10 to-purple-500/10" />
+              <span className="text-4xl group-hover:scale-125 transition-transform relative z-10">{cert.icon}</span>
+              <div className="relative z-10">
+                <span className="block text-sm font-semibold line-clamp-2 group-hover:text-[var(--accent)] transition-colors">{cert.title}</span>
                 <span className="text-xs text-[var(--text-muted)]">{cert.issuer}</span>
               </div>
             </button>
           ))}
         </div>
-      </div>
+      </GlassCard>
       
       {/* Certification Modal */}
       {selectedCert && (
@@ -336,13 +436,18 @@ export default function Portfolio() {
         return (
           <div className="max-w-4xl mx-auto space-y-8">
             {/* Hero Section with gradient */}
-            <div className="relative p-8 rounded-2xl bg-gradient-to-br from-[var(--accent-soft)] to-transparent border border-[var(--border)]">
+            <GlassCard className="p-8" glowColor="rgba(59, 130, 246, 0.2)">
               <div className="flex flex-col md:flex-row items-center gap-6">
-                {/* Avatar with animated border */}
+                {/* Profile Picture with animated border */}
                 <div className="flex flex-col items-center gap-3">
                   <div className="relative">
-                    <div className="w-28 h-28 rounded-full bg-gradient-to-br from-[var(--accent)] to-purple-500 flex items-center justify-center text-white text-3xl font-bold shadow-lg">
-                      NK
+                    <div className="absolute inset-0 bg-gradient-to-br from-[var(--accent)] to-purple-500 rounded-full animate-pulse opacity-50 blur-md" />
+                    <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-[var(--accent)] to-purple-500 p-1 shadow-xl">
+                      <img 
+                        src={PROFILE_IMAGE}
+                        alt="Nakshatra Kundlas"
+                        className="w-full h-full rounded-full object-cover"
+                      />
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full text-xs font-medium border border-green-500/20">
@@ -366,11 +471,11 @@ export default function Portfolio() {
                   </p>
                 </div>
               </div>
-            </div>
+            </GlassCard>
             
             {/* Bio Section */}
             <div className="space-y-6">
-              <div className="p-6 rounded-xl bg-[var(--surface)] border border-[var(--border)]">
+              <GlassCard className="p-6">
                 <div className="flex items-center gap-2 text-[var(--accent)] font-semibold mb-4">
                   <Terminal size={18} />
                   <span>About Me</span>
@@ -387,30 +492,30 @@ export default function Portfolio() {
                     and contributing to the open-source community.
                   </p>
                 </div>
-              </div>
+              </GlassCard>
               
               {/* Current Focus Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-5 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent-border)] transition-all hover:shadow-lg group">
-                  <div className="text-3xl mb-3">🚀</div>
+                <GlassCard className="p-5" glowColor="rgba(34, 197, 94, 0.2)">
+                  <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">🚀</div>
                   <h4 className="font-semibold mb-1 group-hover:text-[var(--accent)] transition-colors">GenAI Applications</h4>
                   <p className="text-sm text-[var(--text-muted)]">Building LLM-powered apps with Vertex AI & RAG pipelines</p>
-                </div>
-                <div className="p-5 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent-border)] transition-all hover:shadow-lg group">
-                  <div className="text-3xl mb-3">☁️</div>
+                </GlassCard>
+                <GlassCard className="p-5" glowColor="rgba(59, 130, 246, 0.2)">
+                  <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">☁️</div>
                   <h4 className="font-semibold mb-1 group-hover:text-[var(--accent)] transition-colors">Cloud DevOps</h4>
                   <p className="text-sm text-[var(--text-muted)]">GCP, Docker, Kubernetes & CI/CD automation</p>
-                </div>
-                <div className="p-5 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent-border)] transition-all hover:shadow-lg group">
-                  <div className="text-3xl mb-3">💻</div>
+                </GlassCard>
+                <GlassCard className="p-5" glowColor="rgba(168, 85, 247, 0.2)">
+                  <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">💻</div>
                   <h4 className="font-semibold mb-1 group-hover:text-[var(--accent)] transition-colors">Open Source</h4>
                   <p className="text-sm text-[var(--text-muted)]">Active contributor at Youth Season of Code</p>
-                </div>
+                </GlassCard>
               </div>
             </div>
             
             {/* GitHub Stats Section */}
-            <GitHubStatsCard username="Zburgers" />
+            <GitHubStatsCard username={GITHUB_USERNAME} />
           </div>
         );
 
@@ -429,14 +534,10 @@ export default function Portfolio() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {projects.map((project, index) => (
-                <div 
+                <GlassCard
                   key={index} 
-                  className={`group rounded-xl border overflow-hidden transition-all duration-300 hover:shadow-xl ${
-                    project.featured 
-                      ? 'border-[var(--accent-border)] bg-gradient-to-br from-[var(--accent-soft)] to-[var(--surface)]' 
-                      : 'border-[var(--border)] bg-[var(--surface)]'
-                  }`}
-                  style={{ animationDelay: `${index * 100}ms` }}
+                  className={`overflow-hidden ${project.featured ? 'ring-1 ring-[var(--accent-border)]' : ''}`}
+                  glowColor={project.featured ? 'rgba(168, 85, 247, 0.2)' : 'rgba(59, 130, 246, 0.15)'}
                 >
                   {/* Project Image */}
                   <div className="relative h-48 bg-gradient-to-br from-[var(--accent-soft)] to-[var(--surface-muted)] overflow-hidden">
@@ -444,16 +545,16 @@ export default function Portfolio() {
                       <img 
                         src={project.image} 
                         alt={project.name} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
                     )}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end justify-center pb-4 gap-3">
                       {project.liveUrl && (
                         <a
                           href={project.liveUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-lg font-medium text-sm hover:bg-[var(--accent-hover)] transition-colors"
+                          className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-lg font-medium text-sm hover:bg-[var(--accent-hover)] transition-colors shadow-lg"
                         >
                           <Play size={16} />
                           Demo
@@ -461,14 +562,14 @@ export default function Portfolio() {
                       )}
                       <button
                         onClick={() => handleViewCode(project)}
-                        className="flex items-center gap-2 px-4 py-2 bg-white/90 text-gray-900 rounded-lg font-medium text-sm hover:bg-white transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 bg-white/95 text-gray-900 rounded-lg font-medium text-sm hover:bg-white transition-colors shadow-lg"
                       >
                         <Github size={16} />
                         Code
                       </button>
                     </div>
                     {project.featured && (
-                      <div className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent)] text-white rounded-full text-xs font-medium shadow-lg">
+                      <div className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[var(--accent)] to-purple-500 text-white rounded-full text-xs font-medium shadow-lg">
                         <Trophy size={12} />
                         {project.status || 'Featured'}
                       </div>
@@ -484,7 +585,7 @@ export default function Portfolio() {
                       {project.techStack.slice(0, 4).map((tech, techIndex) => (
                         <span 
                           key={techIndex} 
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-[var(--surface-muted)] rounded-full"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-[var(--surface-muted)] rounded-full hover:bg-[var(--accent-soft)] transition-colors"
                         >
                           {techIcons[tech] && <span>{techIcons[tech]}</span>}
                           {tech}
@@ -497,7 +598,7 @@ export default function Portfolio() {
                       )}
                     </div>
                   </div>
-                </div>
+                </GlassCard>
               ))}
             </div>
           </div>
@@ -518,7 +619,7 @@ export default function Portfolio() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* Frontend */}
-              <div className="p-5 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent-border)] transition-colors">
+              <GlassCard className="p-5" glowColor="rgba(59, 130, 246, 0.2)">
                 <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--border)]">
                   <span className="text-2xl">⚛️</span>
                   <h3 className="font-semibold text-lg">Frontend</h3>
@@ -534,10 +635,10 @@ export default function Portfolio() {
                     />
                   ))}
                 </div>
-              </div>
+              </GlassCard>
               
               {/* Backend */}
-              <div className="p-5 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent-border)] transition-colors">
+              <GlassCard className="p-5" glowColor="rgba(34, 197, 94, 0.2)">
                 <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--border)]">
                   <span className="text-2xl">🔧</span>
                   <h3 className="font-semibold text-lg">Backend</h3>
@@ -553,10 +654,10 @@ export default function Portfolio() {
                     />
                   ))}
                 </div>
-              </div>
+              </GlassCard>
               
-              {/* AI/ML - Custom section */}
-              <div className="p-5 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent-border)] transition-colors">
+              {/* AI/ML */}
+              <GlassCard className="p-5" glowColor="rgba(168, 85, 247, 0.2)">
                 <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--border)]">
                   <span className="text-2xl">🤖</span>
                   <h3 className="font-semibold text-lg">AI / Machine Learning</h3>
@@ -572,10 +673,10 @@ export default function Portfolio() {
                     />
                   ))}
                 </div>
-              </div>
+              </GlassCard>
               
               {/* DevOps & Cloud */}
-              <div className="p-5 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent-border)] transition-colors">
+              <GlassCard className="p-5" glowColor="rgba(249, 115, 22, 0.2)">
                 <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--border)]">
                   <span className="text-2xl">☁️</span>
                   <h3 className="font-semibold text-lg">DevOps & Cloud</h3>
@@ -591,10 +692,10 @@ export default function Portfolio() {
                     />
                   ))}
                 </div>
-              </div>
+              </GlassCard>
               
               {/* Databases */}
-              <div className="p-5 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent-border)] transition-colors">
+              <GlassCard className="p-5" glowColor="rgba(236, 72, 153, 0.2)">
                 <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--border)]">
                   <span className="text-2xl">🗄️</span>
                   <h3 className="font-semibold text-lg">Databases</h3>
@@ -610,10 +711,10 @@ export default function Portfolio() {
                     />
                   ))}
                 </div>
-              </div>
+              </GlassCard>
               
               {/* Tools */}
-              <div className="p-5 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent-border)] transition-colors">
+              <GlassCard className="p-5" glowColor="rgba(20, 184, 166, 0.2)">
                 <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--border)]">
                   <span className="text-2xl">🛠️</span>
                   <h3 className="font-semibold text-lg">Tools & Others</h3>
@@ -629,7 +730,7 @@ export default function Portfolio() {
                     />
                   ))}
                 </div>
-              </div>
+              </GlassCard>
             </div>
           </div>
         );
@@ -668,11 +769,11 @@ export default function Portfolio() {
               
               <ExperienceItem 
                 type="work"
-                title="AI & DevOps Researcher"
+                title="Research: Perovskite Tandem Solar Cells"
                 organization="Shiv Nadar University"
                 date="2022 – Present"
-                description="Conducting research on novel solar cells using AI modeling (Perovskite Tandem). Specializing in data cleaning, feature importance analysis (SHAP), and model optimization."
-                tags={['Machine Learning', 'SHAP', 'Research', 'Python']}
+                description="Conducting AI-driven research on optimizing Perovskite Tandem solar cell parameters to maximize efficiency. Specializing in data cleaning, feature importance analysis (SHAP), and hyperparameter optimization."
+                tags={['Machine Learning', 'SHAP', 'Optimization', 'Solar Cells', 'Python']}
               />
             </div>
           </div>
@@ -697,67 +798,74 @@ export default function Portfolio() {
             <div className="space-y-6">
               {/* Contact Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <a 
-                  href="mailto:nakshatra.kundlas@outlook.com" 
-                  className="group flex items-center gap-4 p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent-border)] hover:shadow-lg transition-all"
-                >
-                  <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
-                    <Mail size={24} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold">Email</h4>
-                    <p className="text-sm text-[var(--text-secondary)] truncate">nakshatra.kundlas@outlook.com</p>
-                  </div>
-                  <ArrowRight size={18} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all" />
+                <a href="mailto:nakshatra.kundlas@outlook.com">
+                  <GlassCard className="p-4" glowColor="rgba(59, 130, 246, 0.2)">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform">
+                        <Mail size={22} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold">Email</h4>
+                        <p className="text-sm text-[var(--text-secondary)] truncate">nakshatra.kundlas@outlook.com</p>
+                      </div>
+                      <ArrowRight size={18} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all" />
+                    </div>
+                  </GlassCard>
                 </a>
                 
-                <a 
-                  href="https://github.com/Zburgers" 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-4 p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent-border)] hover:shadow-lg transition-all"
-                >
-                  <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-gray-500/10 flex items-center justify-center text-gray-600 dark:text-gray-400">
-                    <Github size={24} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold">GitHub</h4>
-                    <p className="text-sm text-[var(--text-secondary)]">github.com/Zburgers</p>
-                  </div>
-                  <ArrowRight size={18} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all" />
+                <a href="https://github.com/Zburgers" target="_blank" rel="noopener noreferrer">
+                  <GlassCard className="p-4" glowColor="rgba(75, 85, 99, 0.2)">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform">
+                        <Github size={22} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold">GitHub</h4>
+                        <p className="text-sm text-[var(--text-secondary)]">github.com/Zburgers</p>
+                      </div>
+                      <ArrowRight size={18} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all" />
+                    </div>
+                  </GlassCard>
                 </a>
                 
-                <a 
-                  href="https://www.linkedin.com/in/nakshatrakundlas/" 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-4 p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent-border)] hover:shadow-lg transition-all"
-                >
-                  <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-blue-600/10 flex items-center justify-center text-blue-600">
-                    <Linkedin size={24} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold">LinkedIn</h4>
-                    <p className="text-sm text-[var(--text-secondary)]">linkedin.com/in/nakshatrakundlas</p>
-                  </div>
-                  <ArrowRight size={18} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all" />
+                <a href="https://www.linkedin.com/in/nakshatrakundlas/" target="_blank" rel="noopener noreferrer">
+                  <GlassCard className="p-4" glowColor="rgba(59, 130, 246, 0.2)">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform">
+                        <Linkedin size={22} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold">LinkedIn</h4>
+                        <p className="text-sm text-[var(--text-secondary)]">linkedin.com/in/nakshatrakundlas</p>
+                      </div>
+                      <ArrowRight size={18} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all" />
+                    </div>
+                  </GlassCard>
                 </a>
                 
-                <div className="flex items-center gap-4 p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)]">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500">
-                    <MapPin size={24} />
+                <GlassCard className="p-4" hover={false}>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white shadow-lg">
+                      <MapPin size={22} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold">Location</h4>
+                      <p className="text-sm text-[var(--text-secondary)]">Delhi NCR / Chennai, India</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold">Location</h4>
-                    <p className="text-sm text-[var(--text-secondary)]">Delhi NCR / Chennai, India</p>
-                  </div>
-                </div>
+                </GlassCard>
               </div>
               
               {/* CTA Section */}
-              <div className="relative p-6 rounded-xl bg-gradient-to-br from-[var(--accent)] to-purple-600 text-white overflow-hidden">
+              <div className="relative p-6 rounded-2xl bg-gradient-to-br from-[var(--accent)] via-purple-500 to-purple-600 text-white overflow-hidden shadow-2xl">
                 <div className="relative z-10 text-center">
-                  <Sparkles size={32} className="mx-auto mb-3 opacity-80" />
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <img 
+                      src={PROFILE_IMAGE}
+                      alt="Nakshatra Kundlas"
+                      className="w-14 h-14 rounded-full object-cover"
+                    />
+                  </div>
                   <h3 className="text-xl font-bold mb-2">Let's work together!</h3>
                   <p className="text-white/80 mb-4 max-w-md mx-auto">
                     I'm always interested in new opportunities and exciting projects. 
@@ -766,15 +874,17 @@ export default function Portfolio() {
                   </p>
                   <a 
                     href="mailto:nakshatra.kundlas@outlook.com?subject=Let's%20Collaborate!"
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-white text-[var(--accent)] rounded-lg font-semibold hover:bg-white/90 transition-colors"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-white text-[var(--accent)] rounded-xl font-semibold hover:bg-white/90 transition-colors shadow-lg hover:shadow-xl hover:-translate-y-0.5"
                   >
                     <Mail size={18} />
                     Send Message
                   </a>
                 </div>
-                {/* Decorative circles */}
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full" />
-                <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-white/10 rounded-full" />
+                {/* Decorative elements */}
+                <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-xl" />
+                <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-xl" />
+                <div className="absolute top-1/2 left-1/4 w-2 h-2 bg-white/40 rounded-full" />
+                <div className="absolute top-1/3 right-1/4 w-3 h-3 bg-white/30 rounded-full" />
               </div>
             </div>
           </div>
@@ -792,13 +902,13 @@ export default function Portfolio() {
     >
       {/* Navigation Tabs */}
       <nav 
-        className="flex-shrink-0 backdrop-blur-sm"
+        className="flex-shrink-0 backdrop-blur-xl border-b"
         style={{ 
-          borderBottom: '1px solid var(--border)',
-          backgroundColor: 'rgba(252, 253, 255, 0.5)'
+          borderColor: 'var(--border)',
+          background: 'linear-gradient(to right, rgba(var(--surface-rgb), 0.9), rgba(var(--surface-rgb), 0.95))'
         }}
       >
-        <div className="flex items-center gap-1 px-4 py-2">
+        <div className="flex items-center gap-1 px-4 py-2.5 overflow-x-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -807,24 +917,11 @@ export default function Portfolio() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className="relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
-                style={isActive ? {
-                  backgroundColor: 'var(--accent)',
-                  color: 'white',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                } : {
-                  color: 'var(--text-secondary)'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = 'var(--surface-muted)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }
-                }}
+                className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                  isActive 
+                    ? 'bg-gradient-to-r from-[var(--accent)] to-purple-500 text-white shadow-lg' 
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]'
+                }`}
               >
                 <Icon size={16} />
                 <span>{tab.label}</span>

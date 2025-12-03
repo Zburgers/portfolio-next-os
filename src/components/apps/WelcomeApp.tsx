@@ -128,20 +128,13 @@ export default function WelcomeApp() {
               className="flex-shrink-0"
             >
               <div className="relative">
-                {/* Large Avatar */}
-                <div className="w-40 h-40 rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-500 to-purple-600 p-1">
-                  <div 
-                    className="w-full h-full rounded-xl flex items-center justify-center"
-                    style={{ background: 'var(--surface)' }}
-                  >
-                    <span className="text-6xl font-bold" style={{ 
-                      background: 'linear-gradient(135deg, var(--accent), #a855f7)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent'
-                    }}>
-                      NK
-                    </span>
-                  </div>
+                {/* Large Avatar with Profile Picture */}
+                <div className="w-40 h-40 rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-500 to-purple-600 p-1 shadow-xl">
+                  <img 
+                    src="https://avatars.githubusercontent.com/u/95270855?v=4"
+                    alt="Nakshatra Kundlas"
+                    className="w-full h-full rounded-xl object-cover"
+                  />
                 </div>
                 
                 {/* Fedora Badge */}
