@@ -78,9 +78,8 @@
 
   /* DESKTOP - Light Theme Wallpaper */
   --desktop-gradient: url('/F42-01-day.jpg');
-  background-size: contain;
+  background-size: cover;
   background-position: center;
-  background-repeat: no-repeat;
   background-attachment: fixed;
 }
 
@@ -123,9 +122,8 @@
 
   /* DESKTOP - Dark Theme Wallpaper */
   --desktop-gradient: url('/F42-01-night.jpg');
-  background-size: contain;
+  background-size: cover;
   background-position: center;
-  background-repeat: no-repeat;
   background-attachment: fixed;
 }
 
@@ -223,9 +221,8 @@ body::before {
   inset: 0;
   z-index: -2;
   background: var(--desktop-gradient);
-  background-size: contain;
+  background-size: cover;
   background-position: center;
-  background-repeat: no-repeat;
   background-attachment: fixed;
   transition: background 0.6s ease;
 }
@@ -2392,9 +2389,8 @@ code, pre {
 /* Desktop gradient background - ensure it's always visible */
 .desktop-wallpaper {
   background: var(--desktop-gradient);
-  background-size: contain;
+  background-size: cover;
   background-position: center;
-  background-repeat: no-repeat;
   background-attachment: fixed;
   transition: background 0.6s ease;
 }
