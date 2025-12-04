@@ -369,15 +369,15 @@ export default function SystemMonitor() {
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <span className="text-[color:var(--text-muted)]">Kernel</span>
-                    <p className="font-mono text-[color:var(--text-secondary)]">6.5.6-300.fc39.x86_64</p>
+                    <p className="font-mono text-[color:var(--text-secondary)]">6.12.0-300.fc42.x86_64</p>
                   </div>
                   <div>
                     <span className="text-[color:var(--text-muted)]">Memory</span>
-                    <p className="font-mono text-[color:var(--text-secondary)]">7.2 GB / 16 GB</p>
+                    <p className="font-mono text-[color:var(--text-secondary)]">15.2 GB / 32 GB</p>
                   </div>
                   <div>
                     <span className="text-[color:var(--text-muted)]">CPU</span>
-                    <p className="font-mono text-[color:var(--text-secondary)]">Intel i7-12700H @ 3.5GHz</p>
+                    <p className="font-mono text-[color:var(--text-secondary)]">Intel Core i9 @ 3.5GHz</p>
                   </div>
                   <div>
                     <span className="text-[color:var(--text-muted)]">Graphics</span>

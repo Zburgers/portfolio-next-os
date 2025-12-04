@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Wifi, Volume2, Battery } from 'lucide-react';
+import { Wifi, WifiOff, Volume2, Battery, VolumeX } from 'lucide-react';
 import { useDesktop } from '@/context/DesktopContext';
 import CalendarPanel from './CalendarPanel';
 import ControlCenter from './ControlCenter';
@@ -9,7 +9,16 @@ import ActivitiesPanel from './ActivitiesPanel';
 
 export default function TopBar() {
   const [time, setTime] = useState(new Date());
-  const { showCalendar, showControlCenter, showActivities, toggleCalendar, toggleControlCenter, toggleActivities } = useDesktop();
+  const { 
+    showCalendar, 
+    showControlCenter, 
+    showActivities, 
+    toggleCalendar, 
+    toggleControlCenter, 
+    toggleActivities,
+    wifiEnabled,
+    bluetoothEnabled 
+  } = useDesktop();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -27,6 +36,21 @@ export default function TopBar() {
       hour12: true 
     });
     return `${day} ${time}`;
+  };
+
+  // WiFi icon with strikethrough when disabled
+  const WifiIcon = () => {
+    if (wifiEnabled) {
+      return <Wifi className="h-3.5 w-3.5" />;
+    }
+    return (
+      <div className="relative">
+        <Wifi className="h-3.5 w-3.5 opacity-50" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-4 h-0.5 bg-current rotate-45 rounded-full" />
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -75,8 +99,8 @@ export default function TopBar() {
               }`}
             >
               <span className="flex items-center gap-2">
-                <Wifi className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline text-xs">Wi-Fi</span>
+                <WifiIcon />
+                <span className="hidden sm:inline text-xs">{wifiEnabled ? 'Wi-Fi' : 'Off'}</span>
               </span>
               <span className="hidden items-center gap-2 sm:flex">
                 <Volume2 className="h-3.5 w-3.5" />

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSystemBoot } from '@/context/SystemBootContext';
 
 const GRUB_MENU_ITEMS = [
-  { label: 'Fedora Linux 40 (Portfolio Workstation Edition)', selected: true },
+  { label: 'Fedora Linux 42 (Portfolio Workstation Edition)', selected: true },
   { label: 'Advanced options for Fedora Linux', selected: false },
   { label: 'Windows Boot Manager', selected: false, joke: true },
 ];

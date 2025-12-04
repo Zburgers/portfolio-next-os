@@ -894,7 +894,7 @@ export default function Portfolio() {
                   </p>
                   <a 
                     href="mailto:nakshatra.kundlas@outlook.com?subject=Let's%20Collaborate!"
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-white text-[var(--accent)] rounded-xl font-semibold hover:bg-white/90 transition-colors shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-white text-purple-600 rounded-xl font-semibold hover:bg-white/90 transition-colors shadow-lg hover:shadow-xl hover:-translate-y-0.5"
                   >
                     <Mail size={18} />
                     Send Message

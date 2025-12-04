@@ -93,8 +93,8 @@ const apps: App[] = [
         <Gauge className="h-5 w-5" />
       </div>
     ),
-    appType: 'terminal',
-    title: 'Terminal'
+    appType: 'system-monitor',
+    title: 'System Monitor'
   }
 ];
 
