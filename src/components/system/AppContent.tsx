@@ -9,6 +9,7 @@ import Files from '@/components/apps/Files';
 import Settings from '@/components/apps/Settings';
 import TextEditor from '@/components/apps/TextEditor';
 import WelcomeApp from '@/components/apps/WelcomeApp';
+import SystemMonitor from '@/components/apps/SystemMonitor';
 
 interface AppContentProps {
   window: WindowType;
@@ -44,12 +45,15 @@ export default function AppContent({ window }: AppContentProps) {
     case 'welcome':
       return <WelcomeApp />;
     
+    case 'system-monitor':
+      return <SystemMonitor />;
+    
     default:
       return (
-        <div className="h-full bg-gray-900 text-white flex items-center justify-center">
-          <div className="text-center text-gray-400">
-            <p className="text-lg font-semibold mb-2">Unknown Application</p>
-            <p className="text-sm">App type: {type}</p>
+        <div className="h-full bg-[color:var(--color-surface)] text-[color:var(--text-primary)] flex items-center justify-center">
+          <div className="text-center text-[color:var(--text-secondary)]">
+            <p className="text-lg font-semibold mb-2">Application Not Found</p>
+            <p className="text-sm opacity-70">The app "{type}" could not be loaded.</p>
           </div>
         </div>
       );

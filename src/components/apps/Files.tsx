@@ -146,11 +146,11 @@ const fileSystem: FileNode = {
       modified: 'Sep 30, 2025',
       children: [
         {
-          name: 'fedora-39.iso',
+          name: 'fedora-42.iso',
           type: 'file',
           extension: 'iso',
-          size: '2.1 GB',
-          modified: 'Sep 29, 2025',
+          size: '2.4 GB',
+          modified: 'Dec 04, 2025',
         },
         {
           name: 'nodejs-18.tar.gz',

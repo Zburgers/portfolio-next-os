@@ -11,7 +11,7 @@ const GRUB_MENU_ITEMS = [
 ];
 
 const KERNEL_MESSAGES = [
-  { text: '[    0.000000] Linux version 6.8.0-fedora (nakshatra@portfolio)', delay: 0 },
+  { text: '[    0.000000] Linux version 6.12.0-fedora (nakshatra@portfolio)', delay: 0 },
   { text: '[    0.000012] Command line: BOOT_IMAGE=/vmlinuz-6.8.0', delay: 50 },
   { text: '[    0.004521] x86/cpu: Detected Intel Core i9 processor', delay: 100 },
   { text: '[    0.012847] ACPI: Early table checksum verification enabled', delay: 150 },

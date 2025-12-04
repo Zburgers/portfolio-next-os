@@ -643,11 +643,11 @@ module.exports = {
           <>
             {/* File Header */}
             <div className="p-4 border-b border-[color:var(--color-border)] flex items-center justify-between bg-[color:var(--color-surface)]">
-              <div className="flex items-center">
-                <File className="w-5 h-5 mr-3 text-[color:var(--text-secondary)]" />
-                <div>
+              <div className="flex items-center gap-3">
+                <File className="w-5 h-5 text-[color:var(--text-secondary)]" />
+                <div className="flex items-center gap-3">
                   <span className="text-[color:var(--text-primary)] font-medium">{selectedFile.name}</span>
-                  <span className="text-xs text-[color:var(--text-muted)] ml-3 bg-[color:var(--color-surface-muted)] px-2 py-1 rounded">
+                  <span className="text-xs text-[color:var(--text-muted)] bg-[color:var(--color-surface-muted)] px-2 py-1 rounded">
                     {getLanguageFromFilename(selectedFile.name)}
                   </span>
                 </div>

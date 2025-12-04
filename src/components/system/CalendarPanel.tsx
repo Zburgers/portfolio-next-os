@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Bell, BellOff, Cloud } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Bell, BellOff } from 'lucide-react';
 import { useDesktop } from '@/context/DesktopContext';
 
 interface CalendarPanelProps {
@@ -30,7 +30,7 @@ export default function CalendarPanel({ isVisible }: CalendarPanelProps) {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   const goToPreviousMonth = () => {
     setCurrentDate(new Date(year, month - 1, 1));
@@ -44,53 +44,107 @@ export default function CalendarPanel({ isVisible }: CalendarPanelProps) {
     setSelectedDate(new Date(year, month, day));
   };
 
-  const formatDateHeader = (date: Date) => {
-    const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
-    const monthDay = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-    const yearStr = date.getFullYear().toString();
-    return { weekday, monthDay, year: yearStr };
+  // Get week number for a given date
+  const getWeekNumber = (date: Date) => {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
   };
 
-  const renderCalendarDays = () => {
-    const days = [];
+  const renderCalendarRows = () => {
+    const rows = [];
+    const totalCells = firstDayWeekday + daysInMonth;
+    const totalRows = Math.ceil(totalCells / 7);
     
-    // Add empty cells for days before the first day of the month
-    for (let i = 0; i < firstDayWeekday; i++) {
-      days.push(<div key={`empty-${i}`} className="w-8 h-8"></div>);
-    }
+    let dayCounter = 1;
+    
+    for (let row = 0; row < totalRows; row++) {
+      const cells = [];
+      
+      // Calculate week number for this row
+      let weekDate: Date | null = null;
+      for (let col = 0; col < 7; col++) {
+        const cellIndex = row * 7 + col;
+        if (cellIndex >= firstDayWeekday && dayCounter <= daysInMonth) {
+          weekDate = new Date(year, month, dayCounter);
+          break;
+        }
+      }
+      const weekNum = weekDate ? getWeekNumber(weekDate) : '';
+      
+      // Add week number column
+      cells.push(
+        <div key={`week-${row}`} className="calendar-week-num">
+          {weekNum}
+        </div>
+      );
+      
+      // Add day cells
+      for (let col = 0; col < 7; col++) {
+        const cellIndex = row * 7 + col;
+        
+        if (cellIndex < firstDayWeekday || dayCounter > daysInMonth) {
+          // Get days from previous/next month
+          let displayDay = '';
+          if (cellIndex < firstDayWeekday) {
+            // Previous month days
+            const prevMonthLastDay = new Date(year, month, 0).getDate();
+            displayDay = String(prevMonthLastDay - (firstDayWeekday - cellIndex - 1));
+          } else {
+            // Next month days
+            displayDay = String(dayCounter - daysInMonth);
+            dayCounter++;
+          }
+          cells.push(
+            <div key={`empty-${row}-${col}`} className="calendar-day calendar-day-other">
+              {displayDay}
+            </div>
+          );
+        } else {
+          const day = dayCounter;
+          const isToday = 
+            year === today.getFullYear() &&
+            month === today.getMonth() &&
+            day === today.getDate();
 
-    // Add days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      const isToday = 
-        year === today.getFullYear() &&
-        month === today.getMonth() &&
-        day === today.getDate();
+          const isSelected = 
+            year === selectedDate.getFullYear() &&
+            month === selectedDate.getMonth() &&
+            day === selectedDate.getDate();
 
-      const isSelected = 
-        year === selectedDate.getFullYear() &&
-        month === selectedDate.getMonth() &&
-        day === selectedDate.getDate();
-
-      days.push(
-        <button
-          key={day}
-          onClick={() => handleDateClick(day)}
-          className={`calendar-day ${isToday ? 'calendar-day-today' : ''} ${isSelected ? 'calendar-day-selected' : ''}`}
-        >
-          {day}
-        </button>
+          cells.push(
+            <button
+              key={day}
+              onClick={() => handleDateClick(day)}
+              className={`calendar-day ${isToday ? 'calendar-day-today' : ''} ${isSelected && !isToday ? 'calendar-day-selected' : ''}`}
+            >
+              {day}
+              {isToday && <span className="calendar-today-dot"></span>}
+            </button>
+          );
+          dayCounter++;
+        }
+      }
+      
+      rows.push(
+        <div key={`row-${row}`} className="calendar-row">
+          {cells}
+        </div>
       );
     }
-
-    return days;
+    
+    return rows;
   };
 
-  const { weekday, monthDay, year: yearStr } = formatDateHeader(today);
+  const formatDateHeader = () => {
+    const weekday = today.toLocaleDateString('en-US', { weekday: 'long' });
+    const monthName = today.toLocaleDateString('en-US', { month: 'long' });
+    const day = today.getDate();
+    const yearStr = today.getFullYear();
+    return { weekday, monthName, day, year: yearStr };
+  };
 
-  // Sample events - in real implementation, this would be filtered by selectedDate
-  const sampleEvents = selectedDate.getDate() === today.getDate() ? [
-    { id: 1, title: "Aryaman's Birthday", time: "All day", type: "birthday" }
-  ] : [];
+  const { weekday, monthName, day, year: yearStr } = formatDateHeader();
 
   return (
     <>
@@ -100,117 +154,78 @@ export default function CalendarPanel({ isVisible }: CalendarPanelProps) {
         onClick={closePanels}
       />
       
-      {/* GNOME Calendar Panel */}
+      {/* GNOME Calendar Panel - Single Column Layout */}
       <div className="calendar-dropdown">
         <div className="gnome-calendar-panel">
-          
-          {/* NEW WRAPPER - Main Content Body */}
-          <div className="panel-body">
+          {/* Date Header */}
+          <div className="calendar-date-header">
+            <div className="calendar-weekday">{weekday}</div>
+            <div className="calendar-full-date">
+              {monthName} {day} {yearStr}
+            </div>
+          </div>
 
-            {/* LEFT PANE (CALENDAR ONLY) */}
-            <div className="left-pane">
-              {/* Date Header */}
-              <div className="calendar-header">
-                <div className="text-sm font-medium text-secondary opacity-90">{weekday}</div>
-                <div className="text-2xl font-bold text-primary">{monthDay}</div>
-                <div className="text-lg font-medium text-secondary">{yearStr}</div>
+          {/* Calendar Widget */}
+          <div className="calendar-widget">
+            {/* Month Navigation */}
+            <div className="calendar-month-nav">
+              <button onClick={goToPreviousMonth} className="calendar-nav-btn">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              
+              <div className="calendar-month-title">
+                {monthNames[month]}
               </div>
-
-              {/* Calendar Widget */}
-              <div className="calendar-section">
-                {/* Month Navigation */}
-                <div className="calendar-nav">
-                  <button onClick={goToPreviousMonth} className="nav-button">
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  
-                  <div className="text-sm font-semibold text-primary">
-                    {monthNames[month]} {year}
-                  </div>
-                  
-                  <button onClick={goToNextMonth} className="nav-button">
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Day Headers */}
-                <div className="calendar-day-headers">
-                  {dayNames.map(day => (
-                    <div key={day} className="day-header">
-                      {day}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Calendar Grid */}
-                <div className="calendar-grid">
-                  {renderCalendarDays()}
-                </div>
-              </div>
+              
+              <button onClick={goToNextMonth} className="calendar-nav-btn">
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* RIGHT PANE (SCROLLABLE CONTENT) */}
-            <div className="right-pane">
-              {/* Events/Agenda Section */}
-              <div className="agenda-section">
-                <h3 className="section-title">Today</h3>
-                {sampleEvents.length > 0 ? (
-                  <div className="events-list">
-                    {sampleEvents.map(event => (
-                      <div key={event.id} className="event-item">
-                        <div className="event-dot"></div>
-                        <div className="event-content">
-                          <div className="event-title">{event.title}</div>
-                          <div className="event-time">{event.time}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="no-events">No events today</div>
-                )}
-              </div>
-
-              {/* Weather Widget Placeholder */}
-              <div className="weather-section">
-                <div className="flex items-center gap-2 mb-2">
-                  <Cloud className="w-4 h-4 text-secondary" />
-                  <h3 className="section-title">Weather</h3>
+            {/* Day Headers with week number column */}
+            <div className="calendar-header-row">
+              <div className="calendar-week-num-header"></div>
+              {dayNames.map((day, idx) => (
+                <div key={idx} className="calendar-day-header">
+                  {day}
                 </div>
-                <div className="weather-content">
-                  <div className="text-sm text-secondary">Chennai</div>
-                  <div className="text-xs text-muted">Clear sky • 28°C</div>
-                </div>
-              </div>
-
-              {/* Notifications Section */}
-              <div className="notifications-section">
-                <h3 className="section-title">Notifications</h3>
-                <div className="notifications-empty">
-                  <div className="empty-notification-icon">
-                    <Bell className="w-8 h-8 text-muted" />
-                  </div>
-                  <div className="text-sm text-muted">No Notifications</div>
-                </div>
-              </div>
-
-              {/* Do Not Disturb Toggle */}
-              <div className="dnd-section">
-                <div className="dnd-toggle">
-                  <div className="flex items-center gap-2">
-                    {doNotDisturb ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
-                    <span className="text-sm font-medium">Do Not Disturb</span>
-                  </div>
-                  <button
-                    onClick={() => setDoNotDisturb(!doNotDisturb)}
-                    className={`toggle-switch ${doNotDisturb ? 'toggle-active' : ''}`}
-                  >
-                    <div className="toggle-thumb"></div>
-                  </button>
-                </div>
-              </div>
+              ))}
             </div>
 
+            {/* Calendar Grid */}
+            <div className="calendar-body">
+              {renderCalendarRows()}
+            </div>
+          </div>
+
+          {/* Events Section */}
+          <div className="calendar-events-section">
+            <div className="calendar-events-header">Today</div>
+            <div className="calendar-no-events">No events scheduled</div>
+          </div>
+
+          {/* Notifications Section */}
+          <div className="calendar-notifications">
+            <div className="notifications-empty-state">
+              <Bell className="w-10 h-10 text-muted opacity-40" />
+              <span className="text-sm text-muted">No Notifications</span>
+            </div>
+          </div>
+
+          {/* Do Not Disturb Toggle */}
+          <div className="calendar-dnd">
+            <div className="dnd-row">
+              <div className="dnd-label">
+                {doNotDisturb ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+                <span>Do Not Disturb</span>
+              </div>
+              <button
+                onClick={() => setDoNotDisturb(!doNotDisturb)}
+                className={`dnd-toggle-switch ${doNotDisturb ? 'dnd-toggle-active' : ''}`}
+              >
+                <div className="dnd-toggle-thumb"></div>
+              </button>
+            </div>
           </div>
         </div>
       </div>

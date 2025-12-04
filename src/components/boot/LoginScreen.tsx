@@ -222,7 +222,7 @@ export default function LoginScreen() {
           className="absolute bottom-8 text-center"
         >
           <p className="text-xs text-gray-500">
-            Portfolio OS • Fedora Linux 40 Workstation
+            Portfolio OS • Fedora Linux 42 Workstation
           </p>
         </motion.div>
       </div>

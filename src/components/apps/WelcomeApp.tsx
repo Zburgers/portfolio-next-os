@@ -110,7 +110,7 @@ export default function WelcomeApp() {
             Welcome to Portfolio OS
           </h2>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            Fedora Linux 40 • Workstation Edition
+            Fedora Linux 42 • Workstation Edition
           </p>
         </div>
       </div>

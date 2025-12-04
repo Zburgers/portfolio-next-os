@@ -101,6 +101,7 @@ const apps: App[] = [
 export default function Dock() {
   const { windows, activeWindowId, openWindow, focusWindow, updateWindow } = useDesktop();
   const [hoveredApp, setHoveredApp] = useState<string | null>(null);
+  const [isDockHovered, setIsDockHovered] = useState(false);
 
   const handleAppClick = (app: App) => {
     // Check if app is already open
@@ -122,34 +123,47 @@ export default function Dock() {
   };
 
   return (
-    <div className="pointer-events-none fixed bottom-10 left-0 right-0 z-40 flex items-end justify-center">
-      <div className="dock-container">
-        {apps.map((app) => {
-          const focusedWindow = windows.find((w) => w.type === app.appType && !w.minimized);
-          const active = focusedWindow?.id === activeWindowId;
-          const hovered = hoveredApp === app.id;
+    <>
+      {/* Invisible hover trigger zone at bottom of screen */}
+      <div 
+        className="fixed bottom-0 left-0 right-0 h-3 z-40"
+        onMouseEnter={() => setIsDockHovered(true)}
+      />
+      
+      {/* Dock container */}
+      <div 
+        className={`dock-wrapper ${isDockHovered ? 'dock-visible' : 'dock-hidden'}`}
+        onMouseEnter={() => setIsDockHovered(true)}
+        onMouseLeave={() => setIsDockHovered(false)}
+      >
+        <div className="dock-container">
+          {apps.map((app) => {
+            const focusedWindow = windows.find((w) => w.type === app.appType && !w.minimized);
+            const active = focusedWindow?.id === activeWindowId;
+            const hovered = hoveredApp === app.id;
 
-          return (
-            <div key={app.id} className="dock-item">
-              <div className={`dock-tooltip ${hovered ? 'dock-tooltip-visible' : ''}`}>
-                {app.name}
+            return (
+              <div key={app.id} className="dock-item">
+                <div className={`dock-tooltip ${hovered ? 'dock-tooltip-visible' : ''}`}>
+                  {app.name}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleAppClick(app)}
+                  onMouseEnter={() => setHoveredApp(app.id)}
+                  onMouseLeave={() => setHoveredApp(null)}
+                  className={`dock-button ${hovered ? 'dock-button-hovered' : ''} ${active ? 'dock-button-active' : ''}`}
+                >
+                  <span className="dock-icon">
+                    {app.icon}
+                  </span>
+                </button>
+                <div className={`dock-indicator ${active ? 'dock-indicator-active' : ''} ${active && hovered ? 'dock-indicator-hovered' : ''}`} />
               </div>
-              <button
-                type="button"
-                onClick={() => handleAppClick(app)}
-                onMouseEnter={() => setHoveredApp(app.id)}
-                onMouseLeave={() => setHoveredApp(null)}
-                className={`dock-button ${hovered ? 'dock-button-hovered' : ''} ${active ? 'dock-button-active' : ''}`}
-              >
-                <span className="dock-icon">
-                  {app.icon}
-                </span>
-              </button>
-              <div className={`dock-indicator ${active ? 'dock-indicator-active' : ''} ${active && hovered ? 'dock-indicator-hovered' : ''}`} />
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

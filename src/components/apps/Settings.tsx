@@ -260,8 +260,8 @@ export default function Settings() {
                     <span className="text-white text-2xl font-bold">F</span>
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-[color:var(--text-primary)]">Fedora 39</h3>
-                    <p className="text-[color:var(--text-secondary)]">GNOME 45 Workstation</p>
+                    <h3 className="text-xl font-semibold text-[color:var(--text-primary)]">Fedora 42</h3>
+                    <p className="text-[color:var(--text-secondary)]">GNOME 47 Workstation</p>
                   </div>
                 </div>
                 

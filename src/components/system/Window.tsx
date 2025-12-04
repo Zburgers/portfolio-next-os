@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { Window as WindowType, useDesktop } from '@/context/DesktopContext';
 import AppContent from './AppContent';
@@ -15,6 +16,7 @@ export default function Window({ window: windowData }: WindowProps) {
   const { closeWindow, focusWindow, updateWindow, activeWindowId } = useDesktop();
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const windowRef = useRef<HTMLDivElement>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const resizeStartRef = useRef({ width: 0, height: 0, startX: 0, startY: 0 });
@@ -140,7 +142,10 @@ export default function Window({ window: windowData }: WindowProps) {
   };
 
   const handleClose = () => {
-    closeWindow(windowData.id);
+    setIsClosing(true);
+    setTimeout(() => {
+      closeWindow(windowData.id);
+    }, 200);
   };
 
   const handleMaximize = () => {
@@ -188,9 +193,21 @@ export default function Window({ window: windowData }: WindowProps) {
   }
 
   return (
-    <div
+    <motion.div
       ref={windowRef}
-      className={`fixed rounded-2xl overflow-hidden border transition-all duration-300 window-enter backdrop-blur-xl bg-glass-bg ${
+      initial={{ opacity: 0, scale: 0.95, y: 20 }}
+      animate={{ 
+        opacity: isClosing ? 0 : 1, 
+        scale: isClosing ? 0.95 : 1, 
+        y: isClosing ? 10 : 0,
+        transition: { 
+          type: "spring", 
+          stiffness: 400, 
+          damping: 30,
+          duration: 0.2
+        }
+      }}
+      className={`fixed rounded-2xl overflow-hidden border backdrop-blur-xl bg-glass-bg ${
         isActive
           ? 'border-accent shadow-window-active'
           : 'border-glass-border shadow-window'
@@ -206,7 +223,7 @@ export default function Window({ window: windowData }: WindowProps) {
     >
       {/* Modern Title Bar */}
       <div
-        className={`titlebar h-12 flex items-center justify-between px-4 cursor-move select-none bg-glass-bg/50 backdrop-blur-sm border-b border-glass-border ${
+        className={`titlebar h-12 flex items-center justify-between px-4 cursor-move select-none bg-glass-bg/50 backdrop-blur-sm border-b border-glass-border transition-colors duration-200 ${
           isActive 
             ? 'bg-glass-bg/70' 
             : 'bg-glass-bg/30'
@@ -215,50 +232,61 @@ export default function Window({ window: windowData }: WindowProps) {
         onDoubleClick={handleMaximize}
       >
         <div className="flex items-center space-x-3">
-          <span className="text-text-primary text-base font-medium">
+          <motion.span 
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-text-primary text-base font-medium"
+          >
             {windowData.title}
-          </span>
+          </motion.span>
         </div>
 
         {/* macOS-style Traffic Light Controls on Right */}
-        <div className="flex items-center" style={{ gap: '16px' }}>
+        <div className="flex items-center" style={{ gap: '10px' }}>
           {/* Minimize Button - Yellow */}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleMinimize}
-            className="w-3 h-3 rounded-full bg-yellow-400 hover:bg-yellow-300 flex items-center justify-center transition-all duration-200 group"
+            className="w-7 h-7 rounded-full bg-yellow-400 hover:bg-yellow-300 flex items-center justify-center transition-colors duration-200 group"
             title="Minimize"
           >
-            <div className="w-2 h-0.5 bg-yellow-800 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-          </button>
+            <div className="w-3.5 h-0.5 bg-yellow-800 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+          </motion.button>
           
           {/* Maximize Button - Green */}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleMaximize}
-            className="w-3 h-3 rounded-full bg-green-400 hover:bg-green-300 flex items-center justify-center transition-all duration-200 group"
+            className="w-7 h-7 rounded-full bg-green-400 hover:bg-green-300 flex items-center justify-center transition-colors duration-200 group"
             title={windowData.maximized ? 'Restore' : 'Maximize'}
           >
             {windowData.maximized ? (
-              <div className="w-1.5 h-1.5 border border-green-800 opacity-0 group-hover:opacity-100 transition-opacity duration-200 relative">
-                <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 border border-green-800 bg-green-400"></div>
+              <div className="w-3 h-3 border-2 border-green-800 opacity-0 group-hover:opacity-100 transition-opacity duration-200 relative">
+                <div className="absolute -top-1 -right-1 w-3 h-3 border-2 border-green-800 bg-green-400"></div>
               </div>
             ) : (
-              <div className="w-1.5 h-1.5 border border-green-800 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+              <div className="w-3 h-3 border-2 border-green-800 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
             )}
-          </button>
+          </motion.button>
           
           {/* Close Button - Red */}
-          <button
+          <motion.button
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleClose}
-            className="w-3 h-3 rounded-full bg-red-400 hover:bg-red-300 flex items-center justify-center transition-all duration-200 group"
+            className="w-7 h-7 rounded-full bg-red-400 hover:bg-red-300 flex items-center justify-center transition-colors duration-200 group"
             title="Close"
           >
-            <div className="relative w-1.5 h-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <div className="relative w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-1.5 h-0.5 bg-red-800 rotate-45 absolute"></div>
-                <div className="w-1.5 h-0.5 bg-red-800 -rotate-45 absolute"></div>
+                <div className="w-4 h-0.5 bg-red-800 rotate-45 absolute"></div>
+                <div className="w-4 h-0.5 bg-red-800 -rotate-45 absolute"></div>
               </div>
             </div>
-          </button>
+          </motion.button>
         </div>
       </div>
 
@@ -269,13 +297,16 @@ export default function Window({ window: windowData }: WindowProps) {
 
       {/* Resize Handle */}
       {!windowData.maximized && (
-        <div
-          className="absolute bottom-0 right-0 w-4 h-4 cursor-nw-resize opacity-50 hover:opacity-100 transition-opacity"
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.5 }}
+          whileHover={{ opacity: 1 }}
+          className="absolute bottom-0 right-0 w-4 h-4 cursor-nw-resize transition-opacity"
           onMouseDown={handleResizeMouseDown}
         >
           <div className="absolute bottom-1 right-1 w-2 h-2 border-r-2 border-b-2 border-accent" />
-        </div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }
