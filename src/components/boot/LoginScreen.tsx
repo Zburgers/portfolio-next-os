@@ -84,7 +84,7 @@ export default function LoginScreen() {
       />
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col items-center">
+      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
         {/* Time Display */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
@@ -213,19 +213,19 @@ export default function LoginScreen() {
             </motion.div>
           )}
         </motion.div>
-
-        {/* Bottom hint */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
-          className="absolute bottom-8 text-center"
-        >
-          <p className="text-xs text-gray-500">
-            Portfolio OS • Fedora Linux 42 Workstation
-          </p>
-        </motion.div>
       </div>
+
+      {/* Bottom hint - placed outside centered content */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1 }}
+        className="absolute bottom-8 left-0 right-0 z-10 text-center"
+      >
+        <p className="text-xs text-gray-500">
+          Portfolio OS • Fedora Linux 42 Workstation
+        </p>
+      </motion.div>
 
       {/* Animated particles/stars in background */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">

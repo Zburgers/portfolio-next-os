@@ -791,9 +791,9 @@ export default function Portfolio() {
                 type="work"
                 title="Research: Perovskite Tandem Solar Cells"
                 organization="Shiv Nadar University"
-                date="2022 – Present"
+                date="2025 – Present"
                 description="Conducting AI-driven research on optimizing Perovskite Tandem solar cell parameters to maximize efficiency. Specializing in data cleaning, feature importance analysis (SHAP), and hyperparameter optimization."
-                tags={['Machine Learning', 'SHAP', 'Optimization', 'Solar Cells', 'Python']}
+                tags={['Machine Learning', 'SHAP', 'Optimization', 'Solar Cells', 'Python','LazyPredict']}
               />
             </div>
           </div>
@@ -804,20 +804,29 @@ export default function Portfolio() {
 
       case 'contact':
         return (
-          <div className="max-w-3xl mx-auto">
-            <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold flex items-center justify-center gap-3 mb-2">
-                <Mail size={28} className="text-[var(--accent)]" />
+          <div className="max-w-4xl mx-auto space-y-8 pb-8">
+            <div className="text-center mb-10">
+              <h1 className="text-3xl md:text-4xl font-bold flex items-center justify-center gap-3 mb-3">
+                <Mail size={32} className="text-[var(--accent)]" />
                 Get In Touch
               </h1>
-              <p className="text-[var(--text-secondary)]">
+              <p className="text-lg text-[var(--text-secondary)]">
                 Let's build something amazing together
               </p>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-8">
+              {/* Contact Methods Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-px bg-gradient-to-r from-[var(--accent)] to-transparent" />
+                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Contact Methods</h2>
+                  <div className="flex-1 h-px bg-gradient-to-l from-[var(--accent)] to-transparent" />
+                </div>
+              </div>
+              
               {/* Contact Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <a href="mailto:nakshatra.kundlas@outlook.com">
                   <GlassCard className="p-4" glowColor="rgba(59, 130, 246, 0.2)">
                     <div className="flex items-center gap-4">
@@ -877,34 +886,91 @@ export default function Portfolio() {
               </div>
               
               {/* CTA Section */}
-              <div className="relative p-6 rounded-2xl bg-gradient-to-br from-[var(--accent)] via-purple-500 to-purple-600 text-white overflow-hidden shadow-2xl">
-                <div className="relative z-10 text-center">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                    <img 
-                      src={PROFILE_IMAGE}
-                      alt="Nakshatra Kundlas"
-                      className="w-14 h-14 rounded-full object-cover"
-                    />
+              <div className="relative overflow-hidden rounded-3xl shadow-2xl">
+                {/* Background with multiple gradient layers for depth */}
+                <div 
+                  className="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500"
+                  style={{
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%)'
+                  }}
+                />
+                
+                {/* Animated gradient overlay for depth */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+                
+                {/* Decorative blur orbs - positioned strategically */}
+                <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/15 rounded-full blur-3xl" />
+                <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
+                <div className="absolute top-1/2 left-1/4 w-40 h-40 bg-blue-300/20 rounded-full blur-2xl" />
+                
+                {/* Decorative grid pattern for depth */}
+                <div className="absolute inset-0 opacity-10 bg-grid-white/10" style={{
+                  backgroundImage: 'linear-gradient(0deg, transparent 24%, rgba(255,255,255,.05) 25%, rgba(255,255,255,.05) 26%, transparent 27%, transparent 74%, rgba(255,255,255,.05) 75%, rgba(255,255,255,.05) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(255,255,255,.05) 25%, rgba(255,255,255,.05) 26%, transparent 27%, transparent 74%, rgba(255,255,255,.05) 75%, rgba(255,255,255,.05) 76%, transparent 77%, transparent)',
+                  backgroundSize: '50px 50px'
+                }} />
+                
+                {/* Accent line for visual interest */}
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+                
+                {/* Main content */}
+                <div className="relative z-20 p-8 md:p-12 text-center">
+                  {/* Profile image with enhanced styling */}
+                  <div className="mb-8 flex justify-center">
+                    <div className="relative">
+                      {/* Outer glow ring */}
+                      <div className="absolute inset-0 rounded-full bg-white/20 blur-md" style={{
+                        width: '100px',
+                        height: '100px',
+                        left: '-4px',
+                        top: '-4px'
+                      }} />
+                      
+                      {/* Main image container with depth */}
+                      <div className="relative w-24 h-24 rounded-full border-4 border-white/40 shadow-2xl overflow-hidden bg-white/10 backdrop-blur-md">
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full" />
+                        <img 
+                          src={PROFILE_IMAGE}
+                          alt="Nakshatra Kundlas"
+                          className="w-full h-full object-cover relative z-10"
+                        />
+                        {/* Shine effect */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-transparent rounded-full opacity-60" />
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold mb-2">Let's work together!</h3>
-                  <p className="text-white/80 mb-4 max-w-md mx-auto">
+                  
+                  {/* Heading */}
+                  <h3 className="text-3xl md:text-4xl font-bold mb-4 text-white drop-shadow-lg">
+                    Let's work together!
+                  </h3>
+                  
+                  {/* Description text - enhanced visibility */}
+                  <p className="text-white/95 mb-8 max-w-xl mx-auto text-base md:text-lg leading-relaxed drop-shadow-md font-medium">
                     I'm always interested in new opportunities and exciting projects. 
                     Whether you have a project in mind or want to collaborate on open source, 
                     I'd love to hear from you!
                   </p>
-                  <a 
-                    href="mailto:nakshatra.kundlas@outlook.com?subject=Let's%20Collaborate!"
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-white text-purple-600 rounded-xl font-semibold hover:bg-white/90 transition-colors shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-                  >
-                    <Mail size={18} />
-                    Send Message
-                  </a>
+                  
+                  {/* Button with enhanced visibility and depth */}
+                  <div className="flex justify-center">
+                    <a 
+                      href="mailto:nakshatra.kundlas@outlook.com?subject=Let's%20Collaborate!"
+                      className="inline-flex items-center justify-center gap-3 px-10 py-4 bg-white text-black font-bold rounded-2xl transition-all duration-300 hover:shadow-2xl hover:scale-110 active:scale-95 shadow-2xl border-2 border-white/40 backdrop-blur-sm group relative overflow-hidden"
+                    >
+                      {/* Button glow effect */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      
+                      {/* Button content */}
+                      <Mail size={24} className="group-hover:-translate-y-1 transition-transform duration-300" />
+                      <span className="text-lg relative z-10">Send Message</span>
+                    </a>
+                  </div>
+                  
+                  {/* Secondary CTA hint */}
+                  <p className="mt-6 text-white/70 text-sm drop-shadow-md">
+                    or reach out on my socials
+                  </p>
                 </div>
-                {/* Decorative elements */}
-                <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-xl" />
-                <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-xl" />
-                <div className="absolute top-1/2 left-1/4 w-2 h-2 bg-white/40 rounded-full" />
-                <div className="absolute top-1/3 right-1/4 w-3 h-3 bg-white/30 rounded-full" />
               </div>
             </div>
           </div>
