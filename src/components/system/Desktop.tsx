@@ -146,8 +146,24 @@ export default function Desktop() {
   const handleDesktopIconDoubleClick = (app: DesktopApp) => {
     // Double click - open application
     if (app.appType === 'trash') {
-      // Handle trash specially - could open trash window
+      // Handle trash specially - open trash window
       console.log('Open trash');
+      // Check if trash window is already open
+      const existingWindow = windows.find(w => w.type === app.appType);
+
+      if (existingWindow) {
+        // If window exists but is minimized, restore it
+        if (existingWindow.minimized) {
+          updateWindow(existingWindow.id, { minimized: false });
+          focusWindow(existingWindow.id);
+        } else {
+          // Just focus the existing window
+          focusWindow(existingWindow.id);
+        }
+      } else {
+        // Open new trash window
+        openWindow(app.appType, app.title);
+      }
       return;
     }
     

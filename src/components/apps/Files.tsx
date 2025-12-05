@@ -248,7 +248,15 @@ const fileSystem: FileNode = {
       name: 'Trash',
       type: 'folder',
       modified: 'Sep 06, 2025',
-      children: [],
+      children: [
+        {
+          name: 'Windows11.iso',
+          type: 'file',
+          extension: 'iso',
+          size: '5.4 GB',
+          modified: 'Dec 05, 2025',
+        },
+      ],
     },
     {
       name: 'getting-started.pdf',
@@ -267,7 +275,7 @@ const sidebarDestinations: SidebarDestination[] = [
   { icon: Image, label: 'Pictures', path: ['Pictures'] },
   { icon: Video, label: 'Videos', path: ['Videos'] },
   { icon: Monitor, label: 'Desktop', path: ['Desktop'] },
-  { icon: Trash2, label: 'Trash', path: [] },
+  { icon: Trash2, label: 'Trash', path: ['Trash'] },
 ];
 
 const recentItems: RecentItem[] = [
@@ -297,6 +305,11 @@ function buildPathFromSegments(segments: string[]): FileNode[] {
 function getNodeIcon(node: FileNode): { icon: LucideIcon; className: string } {
   if (node.type === 'folder') {
     return { icon: Folder, className: 'text-amber-600' };
+  }
+
+  // Special case for Windows ISO file - use Windows logo
+  if (node.name.toLowerCase().includes('windows') && node.extension === 'iso') {
+    return { icon: null, className: 'text-primary' };
   }
 
   switch (node.extension) {
@@ -737,9 +750,19 @@ export default function Files() {
                             : 'hover:bg-surface-hover'
                         )}
                       >
-                        <span className={cx('flex h-12 w-12 items-center justify-center rounded', iconColor)}>
-                          <Icon className="h-8 w-8" />
-                        </span>
+                        {item.name.toLowerCase().includes('windows') && item.extension === 'iso' ? (
+                          <div className="flex h-12 w-12 items-center justify-center rounded text-primary">
+                            <img
+                              src="/windows-logo.svg"
+                              alt="Windows Logo"
+                              className="h-8 w-8"
+                            />
+                          </div>
+                        ) : (
+                          <span className={cx('flex h-12 w-12 items-center justify-center rounded', iconColor)}>
+                            <Icon className="h-8 w-8" />
+                          </span>
+                        )}
                         <div className="flex flex-col gap-1">
                           <span className="text-sm font-semibold leading-tight text-primary">
                             {item.name}
@@ -780,9 +803,19 @@ export default function Files() {
                           )}
                         >
                           <span className="flex items-center gap-3">
-                            <span className={cx('flex h-8 w-8 items-center justify-center rounded', className)}>
-                              <Icon className="h-4 w-4" />
-                            </span>
+                            {item.name.toLowerCase().includes('windows') && item.extension === 'iso' ? (
+                              <div className="flex h-8 w-8 items-center justify-center rounded text-primary">
+                                <img
+                                  src="/windows-logo.svg"
+                                  alt="Windows Logo"
+                                  className="h-4 w-4"
+                                />
+                              </div>
+                            ) : (
+                              <span className={cx('flex h-8 w-8 items-center justify-center rounded', className)}>
+                                <Icon className="h-4 w-4" />
+                              </span>
+                            )}
                             <span className={cx('truncate font-medium', isSelected ? 'text-white' : 'text-primary')}>{item.name}</span>
                           </span>
                           <span className={cx('text-sm', isSelected ? 'text-white/80' : 'text-secondary')}>

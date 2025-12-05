@@ -8,8 +8,9 @@ import CodeEditor from '@/components/apps/CodeEditor';
 import Files from '@/components/apps/Files';
 import Settings from '@/components/apps/Settings';
 import TextEditor from '@/components/apps/TextEditor';
-import WelcomeApp from '@/components/apps/WelcomeApp';
+import WelcomeBootstrapper from '@/components/Welcome/WelcomeBootstrapper';
 import SystemMonitor from '@/components/apps/SystemMonitor';
+import Trash from '@/components/apps/Trash';
 
 interface AppContentProps {
   window: WindowType;
@@ -43,11 +44,14 @@ export default function AppContent({ window }: AppContentProps) {
       return <TextEditor />;
     
     case 'welcome':
-      return <WelcomeApp />;
+      return <WelcomeBootstrapper />;
     
     case 'system-monitor':
       return <SystemMonitor />;
-    
+
+    case 'trash':
+      return <Trash />;
+
     default:
       return (
         <div className="h-full bg-[color:var(--color-surface)] text-[color:var(--text-primary)] flex items-center justify-center">
