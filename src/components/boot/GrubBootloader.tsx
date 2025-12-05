@@ -122,13 +122,13 @@ export default function GrubBootloader() {
           className="fixed inset-0 bg-black flex flex-col font-mono text-sm"
           onClick={handleSkip}
         >
-          {/* GRUB Header */}
-          <div className="p-4 border-b border-gray-700">
-            <pre className="text-gray-400 text-xs leading-tight">
-{`                    GNU GRUB  version 2.06
-
- ┌────────────────────────────────────────────────────────────────────┐`}
-            </pre>
+          {/* GRUB Header - centered to align with menu */}
+          <div className="p-4 border-b border-gray-700 flex justify-center">
+            <div className="w-full max-w-2xl">
+              <pre className="text-gray-400 text-xs leading-tight text-center">
+{`GNU GRUB  version 2.06`}
+              </pre>
+            </div>
           </div>
 
           {/* Menu Items */}
@@ -179,13 +179,14 @@ export default function GrubBootloader() {
             </motion.div>
           </div>
 
-          {/* GRUB Footer */}
-          <div className="p-4 border-t border-gray-700">
-            <pre className="text-gray-500 text-xs">
-{` └────────────────────────────────────────────────────────────────────┘
-      Use the ↑ and ↓ keys to change the selection.
-      Press 'e' to edit the selected entry, or 'c' for a command line.`}
-            </pre>
+          {/* GRUB Footer - centered to align with menu */}
+          <div className="p-4 border-t border-gray-700 flex justify-center">
+            <div className="w-full max-w-2xl">
+              <pre className="text-gray-500 text-xs text-center">
+{`Use the ↑ and ↓ keys to change the selection.
+Press 'e' to edit the selected entry, or 'c' for a command line.`}
+              </pre>
+            </div>
           </div>
         </motion.div>
       ) : (

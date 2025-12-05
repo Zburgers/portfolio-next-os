@@ -47,11 +47,6 @@ const TrashApp: React.FC = () => {
       return { icon: HardDrive, className: 'text-amber-600' };
     }
 
-    // Special case for Windows ISO file - use Windows logo
-    if (item.name.toLowerCase().includes('windows') && item.extension === 'iso') {
-      return { icon: null, className: 'text-primary' };
-    }
-
     switch (item.extension) {
       case 'iso':
         return { icon: Download, className: 'text-purple-600' };

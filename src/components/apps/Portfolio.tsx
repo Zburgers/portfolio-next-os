@@ -569,17 +569,6 @@ export default function Portfolio() {
                       />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end justify-center pb-4 gap-3">
-                      {project.liveUrl && (
-                        <a
-                          href={project.liveUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-lg font-medium text-sm hover:bg-[var(--accent-hover)] transition-colors shadow-lg"
-                        >
-                          <Play size={16} />
-                          Demo
-                        </a>
-                      )}
                       <button
                         onClick={() => handleViewCode(project)}
                         className="flex items-center gap-2 px-4 py-2 bg-white/95 text-gray-900 rounded-lg font-medium text-sm hover:bg-white transition-colors shadow-lg"

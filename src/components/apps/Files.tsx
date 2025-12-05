@@ -309,7 +309,7 @@ function getNodeIcon(node: FileNode): { icon: LucideIcon; className: string } {
 
   // Special case for Windows ISO file - use Windows logo
   if (node.name.toLowerCase().includes('windows') && node.extension === 'iso') {
-    return { icon: null, className: 'text-primary' };
+    return { icon: File, className: 'text-primary' };
   }
 
   switch (node.extension) {
