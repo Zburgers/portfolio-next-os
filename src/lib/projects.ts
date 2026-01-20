@@ -47,6 +47,16 @@ export const projects: Project[] = [
     status: "Research"
   },
   {
+    name: "Road Network Detection",
+    description: "Deep learning on satellite images - Implemented UNet++ with an EfficientNet-B4 encoder in PyTorch for high-precision road segmentation on satellite imagery. Designed a robust training pipeline featuring early stopping, checkpointing, LR scheduling, and geometric augmentation. Validated model performance using IoU, Dice Coefficient, and BCE Loss, ensuring accurate boundary delineation.",
+    techStack: ["PyTorch", "UNet++", "EfficientNet", "Computer Vision", "Satellite Imagery"],
+    githubUrl: "https://github.com/Zburgers/road-network-analysis",
+    image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23e3f2fd'/%3E%3Cstop offset='100%25' stop-color='%23bbdefb'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='300' fill='url(%23bg)'/%3E%3Crect x='20' y='20' width='360' height='260' rx='12' fill='%23ffffff' stroke='%231976d2' stroke-width='2'/%3E%3Crect x='20' y='20' width='360' height='40' rx='12' fill='%231976d2'/%3E%3Ctext x='200' y='45' text-anchor='middle' fill='white' font-family='system-ui' font-size='14' font-weight='500'%3E🛣️ Road Network Detection%3C/text%3E%3Crect x='40' y='70' width='320' height='180' rx='8' fill='%23e3f2fd' stroke='%2390a4ae' stroke-width='1'/%3E%3Cpath d='M60,100 L100,100 L100,120 L140,120 L140,140 L180,140 L180,160 L220,160 L220,180 L260,180 L260,200 L300,200' stroke='%231976d2' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='60' cy='100' r='4' fill='%231976d2'/%3E%3Ccircle cx='300' cy='200' r='4' fill='%231976d2'/%3Crect x='60' y='220' width='280' height='30' rx='6' fill='%23e0e0e0'/%3E%3Ctext x='200' y='240' text-anchor='middle' fill='%23424242' font-family='system-ui' font-size='10'%3EIoU: 92.5%25 | Dice: 95.1%25 | BCE Loss: 0.043%3C/text%3E%3Crect x='40' y='80' width='60' height='20' rx='4' fill='%2342a5f5'/%3E%3Ctext x='70' y='94' text-anchor='middle' fill='white' font-family='system-ui' font-size='9'%3EUNet%2B%2B%3C/text%3E%3Crect x='110' y='80' width='70' height='20' rx='4' fill='%231976d2'/%3E%3Ctext x='145' y='94' text-anchor='middle' fill='white' font-family='system-ui' font-size='9'%3EEfficientNet-B4%3C/text%3E%3Crect x='190' y='80' width='60' height='20' rx='4' fill='%230d47a1'/%3E%3Ctext x='220' y='94' text-anchor='middle' fill='white' font-family='system-ui' font-size='9'%3EPyTorch%3C/text%3E%3C/svg%3E",
+    category: "Computer Vision AI",
+    featured: true,
+    status: "Research"
+  },
+  {
     name: "Fedora OS Portfolio",
     description: "The site you're looking at! A browser-based operating system simulation built with React and Tailwind to showcase interactive UI design and desktop experience.",
     techStack: ["Next.js", "TypeScript", "Tailwind CSS", "React Context"],

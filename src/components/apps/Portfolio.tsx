@@ -305,15 +305,23 @@ const ExperienceItem = ({
   );
 };
 
-// Certification data - 5 real certifications from resume
+// Certification data - real certifications from resume
 const certifications = [
   {
     title: 'PyTorch and Deep Learning for Decision Makers (LFS116)',
     issuer: 'The Linux Foundation',
     date: 'Dec 2025',
-    credentialId: 'LF-d5jzp5xcoc',
+    credentialId: 'LF-d5jxp5xcoc',
     icon: '🔥',
     description: 'Comprehensive PyTorch course covering neural network fundamentals, deep learning architectures, and practical implementation for business decision-making.'
+  },
+  {
+    title: 'OpenAPI Fundamentals (LFEL1011)',
+    issuer: 'The Linux Foundation',
+    date: 'Jan 2026',
+    credentialId: 'LF-fq040jy0s2',
+    icon: '📚',
+    description: 'Fundamentals of OpenAPI specification and its implementation for creating robust APIs.'
   },
   {
     title: 'Prompt Design in Vertex AI Skill Badge',
@@ -331,6 +339,13 @@ const certifications = [
     description: 'Built 5 ML projects including a Neural Network SMS Classifier and a Book Recommendation Engine using KNN algorithms.'
   },
   {
+    title: 'Blockchain and its Applications',
+    issuer: 'NPTEL',
+    date: 'Jan 2025',
+    icon: '⛓️',
+    description: 'Fundamentals of blockchain technology, distributed ledger systems, smart contracts, and real-world applications across industries.'
+  },
+  {
     title: 'Responsible and Safe AI Systems',
     issuer: 'NPTEL',
     date: 'Nov 2025',
@@ -338,11 +353,11 @@ const certifications = [
     description: 'Ethics-focused certification covering AI safety, bias mitigation, responsible deployment, and governance frameworks for artificial intelligence systems.'
   },
   {
-    title: 'Blockchain and its Applications',
+    title: 'Patent Law for Engineers and Scientists',
     issuer: 'NPTEL',
-    date: 'Jan 2025',
-    icon: '⛓️',
-    description: 'Fundamentals of blockchain technology, distributed ledger systems, smart contracts, and real-world applications across industries.'
+    date: 'Jan 2026',
+    icon: '⚖️',
+    description: 'Understanding patent law principles, intellectual property rights, and legal aspects relevant to engineers and scientists.'
   }
 ];
 
