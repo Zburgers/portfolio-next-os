@@ -895,37 +895,39 @@ module.exports = {
                         <p className="text-[#858585] text-sm mt-2">Loading repositories...</p>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {repos.slice(0, 6).map((repo) => (
-                          <div
-                            key={repo.id}
-                            onClick={() => {
-                              const newGithubUrl = repo.htmlUrl;
-                              fetchRepoForUrl(newGithubUrl, repo.name);
-                            }}
-                            className="bg-[#252526] hover:bg-[#2a2d2e] border border-[#3c3c3c] rounded-md p-4 cursor-pointer transition-all duration-200 flex items-center"
-                          >
-                            <div className="mr-3">
-                              <Folder className="w-6 h-6 text-[#75beff]" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-[#d7dae0] font-medium truncate">{repo.name}</div>
-                              <div className="text-[#858585] text-sm truncate">{repo.description || 'No description'}</div>
-                              <div className="flex items-center mt-1 text-xs">
-                                {repo.language && (
-                                  <span className="flex items-center mr-3">
-                                    <div
-                                      className="w-2 h-2 rounded-full mr-1"
-                                      style={{ backgroundColor: getLanguageColor(repo.language) }}
-                                    ></div>
-                                    {repo.language}
-                                  </span>
-                                )}
-                                <span className="text-[#858585]">★ {repo.stargazersCount}</span>
+                      <div className="max-h-80 overflow-y-auto pr-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {repos.map((repo) => (
+                            <div
+                              key={repo.id}
+                              onClick={() => {
+                                const newGithubUrl = repo.htmlUrl;
+                                fetchRepoForUrl(newGithubUrl, repo.name);
+                              }}
+                              className="bg-[#252526] hover:bg-[#2a2d2e] border border-[#3c3c3c] rounded-md p-4 cursor-pointer transition-all duration-200 flex items-center"
+                            >
+                              <div className="mr-3">
+                                <Folder className="w-6 h-6 text-[#75beff]" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-[#d7dae0] font-medium truncate">{repo.name}</div>
+                                <div className="text-[#858585] text-sm truncate">{repo.description || 'No description'}</div>
+                                <div className="flex items-center mt-1 text-xs">
+                                  {repo.language && (
+                                    <span className="flex items-center mr-3">
+                                      <div
+                                        className="w-2 h-2 rounded-full mr-1"
+                                        style={{ backgroundColor: getLanguageColor(repo.language) }}
+                                      ></div>
+                                      {repo.language}
+                                    </span>
+                                  )}
+                                  <span className="text-[#858585]">★ {repo.stargazersCount}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1048,37 +1050,39 @@ module.exports = {
                       <p className="text-[#858585] text-sm mt-2">Connect to GitHub to see your repositories</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {repos.slice(0, 6).map((repo) => (
-                        <div
-                          key={repo.id}
-                          onClick={() => {
-                            const newGithubUrl = repo.htmlUrl;
-                            fetchRepoForUrl(newGithubUrl, repo.name);
-                          }}
-                          className="bg-[#252526] hover:bg-[#2a2d2e] border border-[#3c3c3c] rounded-md p-4 cursor-pointer transition-all duration-200 flex items-center"
-                        >
-                          <div className="mr-3">
-                            <Folder className="w-6 h-6 text-[#75beff]" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[#d7dae0] font-medium truncate">{repo.name}</div>
-                            <div className="text-[#858585] text-sm truncate">{repo.description || 'No description'}</div>
-                            <div className="flex items-center mt-1 text-xs">
-                              {repo.language && (
-                                <span className="flex items-center mr-3">
-                                  <div
-                                    className="w-2 h-2 rounded-full mr-1"
-                                    style={{ backgroundColor: getLanguageColor(repo.language) }}
-                                  ></div>
-                                  {repo.language}
-                                </span>
-                              )}
-                              <span className="text-[#858585]">★ {repo.stargazersCount}</span>
+                    <div className="max-h-80 overflow-y-auto pr-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {repos.map((repo) => (
+                          <div
+                            key={repo.id}
+                            onClick={() => {
+                              const newGithubUrl = repo.htmlUrl;
+                              fetchRepoForUrl(newGithubUrl, repo.name);
+                            }}
+                            className="bg-[#252526] hover:bg-[#2a2d2e] border border-[#3c3c3c] rounded-md p-4 cursor-pointer transition-all duration-200 flex items-center"
+                          >
+                            <div className="mr-3">
+                              <Folder className="w-6 h-6 text-[#75beff]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[#d7dae0] font-medium truncate">{repo.name}</div>
+                              <div className="text-[#858585] text-sm truncate">{repo.description || 'No description'}</div>
+                              <div className="flex items-center mt-1 text-xs">
+                                {repo.language && (
+                                  <span className="flex items-center mr-3">
+                                    <div
+                                      className="w-2 h-2 rounded-full mr-1"
+                                      style={{ backgroundColor: getLanguageColor(repo.language) }}
+                                    ></div>
+                                    {repo.language}
+                                  </span>
+                                )}
+                                <span className="text-[#858585]">★ {repo.stargazersCount}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
