@@ -144,8 +144,8 @@ export default function Window({ window: windowData }: WindowProps) {
       aria-label={windowData.title}
       aria-modal={false}
       tabIndex={-1}
-      initial={{ opacity: 0, scale: 0.97, y: 12 }}
-      animate={{ opacity: isClosing ? 0 : 1, scale: isClosing ? 0.97 : 1, y: isClosing ? 8 : 0 }}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: isClosing ? 0 : 1, y: isClosing ? 6 : 0 }}
       transition={{ type: 'spring', stiffness: 400, damping: 32, duration: 0.18 }}
       className={['window-shell', isActive ? 'window-shell-active' : ''].join(' ')}
       style={{ left: windowData.x, top: windowData.y, width: windowData.width, height: windowData.height, zIndex: windowData.zIndex }}

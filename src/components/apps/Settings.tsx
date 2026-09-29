@@ -61,10 +61,9 @@ export default function Settings() {
       return (
         <section aria-labelledby="settings-heading">
           <h2 id="settings-heading" className="mb-2 text-2xl font-semibold">Appearance</h2>
-          <p className="mb-6 text-sm text-[color:var(--text-secondary)]">Choose how this desktop is shown in your browser.</p>
           <div className="rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-5">
             <h3 className="text-lg font-medium">Theme</h3>
-            <p className="mb-5 mt-1 text-sm text-[color:var(--text-secondary)]">System follows your browser’s light or dark appearance preference.</p>
+            <p className="mb-5 mt-1 text-sm text-[color:var(--text-secondary)]">System matches your appearance preference.</p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" role="group" aria-label="Desktop theme">
               {themes.map(({ id, label, icon: Icon, preview }) => (
                 <button key={id} type="button" onClick={() => setTheme(id)} aria-pressed={theme === id} className={cx('rounded-lg border-2 p-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--accent)]', theme === id ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]' : 'border-[color:var(--color-border)] hover:border-[color:var(--accent)]/50')}>
@@ -83,21 +82,19 @@ export default function Settings() {
       const statusLabel = online === null ? 'Checking…' : online ? 'Online' : 'Offline';
       const connectionLabel = connection?.effectiveType
         ? `${connection.effectiveType.toUpperCase()}${typeof connection.downlink === 'number' ? ` · ~${connection.downlink} Mbps` : ''}`
-        : 'Not reported by this browser';
+        : 'Not reported';
       return (
         <section aria-labelledby="settings-heading">
           <h2 id="settings-heading" className="mb-2 text-2xl font-semibold">Network</h2>
-          <p className="mb-6 text-sm text-[color:var(--text-secondary)]">Read-only connection details reported by this browser.</p>
           <div className="rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-5">
             <div className="flex items-center gap-3">
               {online === false ? <WifiOff className="h-5 w-5 text-[color:var(--text-secondary)]" aria-hidden="true" /> : <Wifi className="h-5 w-5 text-[color:var(--accent)]" aria-hidden="true" />}
-              <div><h3 className="font-medium">Browser connectivity</h3><p className="text-sm text-[color:var(--text-secondary)]" aria-live="polite">{statusLabel}</p></div>
+              <div><h3 className="font-medium">Connection</h3><p className="text-sm text-[color:var(--text-secondary)]" aria-live="polite">{statusLabel}</p></div>
             </div>
             <dl className="mt-5 grid grid-cols-1 gap-4 border-t border-[color:var(--color-border)] pt-4 sm:grid-cols-2">
               <div><dt className="text-xs uppercase tracking-wide text-[color:var(--text-muted)]">Connection estimate</dt><dd className="mt-1 text-sm">{connectionLabel}</dd></div>
-              <div><dt className="text-xs uppercase tracking-wide text-[color:var(--text-muted)]">Round-trip estimate</dt><dd className="mt-1 text-sm">{typeof connection?.rtt === 'number' ? `~${connection.rtt} ms` : 'Not reported by this browser'}</dd></div>
+              <div><dt className="text-xs uppercase tracking-wide text-[color:var(--text-muted)]">Round-trip estimate</dt><dd className="mt-1 text-sm">{typeof connection?.rtt === 'number' ? `~${connection.rtt} ms` : 'Not reported'}</dd></div>
             </dl>
-            <p className="mt-5 rounded-lg bg-[color:var(--color-surface-muted)] p-3 text-xs text-[color:var(--text-secondary)]">These estimates can be coarse or unavailable. “Online” only reflects the browser’s connection flag; it does not guarantee a site can be reached. A webpage cannot toggle your Wi-Fi radio.</p>
           </div>
         </section>
       );
@@ -105,10 +102,9 @@ export default function Settings() {
 
     return (
       <section aria-labelledby="settings-heading" className="space-y-5">
-        <div><h2 id="settings-heading" className="mb-2 text-2xl font-semibold">About this preview</h2><p className="text-sm text-[color:var(--text-secondary)]">A portfolio presented inside a browser-based desktop interface.</p></div>
+        <div><h2 id="settings-heading" className="mb-2 text-2xl font-semibold">About</h2></div>
         <div className="rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-5">
           <p className="font-semibold">Project Next OS</p>
-          <p className="mt-2 text-sm text-[color:var(--text-secondary)]">This is a visual simulation. Browser controls cannot read or change the computer’s hardware, network radios, processes, or location settings.</p>
         </div>
       </section>
     );

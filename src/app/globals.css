@@ -2,9 +2,9 @@
 
 :root {
   /* TYPOGRAPHY SYSTEM */
-  --font-sans: var(--font-geist-sans), "Cantarell", "Segoe UI", system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-display: var(--font-geist-sans), "Cantarell", "Segoe UI", system-ui, sans-serif;
+  --font-sans: var(--font-plex-sans), "Cantarell", "Segoe UI", system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: var(--font-plex-sans), "Cantarell", "Segoe UI", system-ui, sans-serif;
   
   /* Font Sizes */
   --font-size-xs: 0.75rem;     /* 12px */
@@ -2939,10 +2939,8 @@ code, pre {
   overflow: hidden;
   border: 1px solid var(--glass-border);
   border-radius: 17px;
-  background: color-mix(in srgb, var(--window-bg) 91%, transparent);
+  background: var(--window-bg);
   box-shadow: 0 28px 90px rgba(2, 8, 14, 0.36), inset 0 1px rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(24px) saturate(1.25);
-  -webkit-backdrop-filter: blur(24px) saturate(1.25);
 }
 .window-shell-active {
   border-color: color-mix(in srgb, var(--accent) 55%, var(--glass-border));
@@ -2959,6 +2957,8 @@ code, pre {
   border-bottom: 1px solid var(--border);
   padding: 0 14px;
   background: color-mix(in srgb, var(--glass-bg) 88%, transparent);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
   cursor: grab;
   user-select: none;
   touch-action: none;

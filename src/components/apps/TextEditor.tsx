@@ -152,7 +152,7 @@ export default function TextEditor({ initialFileName, initialFilePath, initialCo
     const name = initialFileName || 'Welcome.md';
     const defaultContent = initialFileName
       ? initialContent || ''
-      : '# Welcome to Text Editor\n\nEdit a file, save a browser-local draft, or download a copy.';
+      : '';
     let content = defaultContent;
     let hasSavedDraft = false;
     try {
@@ -238,7 +238,7 @@ export default function TextEditor({ initialFileName, initialFilePath, initialCo
     try {
       persistDraft(activeDocument.id, activeDocument.name, activeDocument.content);
     } catch {
-      setStatusMessage('Browser storage unavailable — download a copy to keep this document');
+      setStatusMessage('Save failed. Download a copy.');
       return;
     }
 
@@ -259,7 +259,7 @@ export default function TextEditor({ initialFileName, initialFilePath, initialCo
         persistDraft(activeDocument.id, activeDocument.name, activeDocument.content);
         setDocuments(prev => prev.map(doc => doc.id === activeDocument.id ? { ...doc, saved: true } : doc));
       } catch {
-        setStatusMessage('Browser storage unavailable — download a copy to keep this document');
+        setStatusMessage('Save failed. Download a copy.');
       }
     }, 900);
     return () => window.clearTimeout(timeout);
@@ -284,7 +284,7 @@ export default function TextEditor({ initialFileName, initialFilePath, initialCo
         try {
           persistDraft(closing.id, closing.name, closing.content);
         } catch {
-          if (!window.confirm(`${closing.name} could not be saved in this browser. Close and lose the unsaved changes?`)) return;
+          if (!window.confirm(`${closing.name} could not be saved. Close and lose the unsaved changes?`)) return;
         }
       } else if (!window.confirm(`Discard unsaved changes to ${closing.name}?`)) {
         return;
@@ -480,7 +480,7 @@ export default function TextEditor({ initialFileName, initialFilePath, initialCo
               onClick={saveDocument}
               className="btn-icon"
               title="Save document (Ctrl+S)"
-              aria-label="Save document to this browser"
+              aria-label="Save document"
             >
               <Save className="h-4 w-4" />
             </button>
@@ -548,7 +548,7 @@ export default function TextEditor({ initialFileName, initialFilePath, initialCo
               className="bg-transparent border-none outline-none text-text-primary font-medium min-w-0 max-w-48"
             />
             <span className={`px-sm py-xs rounded text-xs ${activeDocument.saved ? 'text-success' : 'text-warning'}`}>
-              {activeDocument.saved ? 'Saved in this browser' : 'Unsaved changes'}
+              {activeDocument.saved ? 'Saved' : 'Unsaved changes'}
             </span>
           </div>
         </div>

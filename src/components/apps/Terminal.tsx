@@ -117,8 +117,8 @@ export default function Terminal() {
               autoComplete="off"
               spellCheck={false}
               autoCapitalize="off"
-              aria-label="Enter a simulated profile shell command"
-              title="Browser-only profile shell. Host commands are unavailable."
+              aria-label="Enter a terminal command"
+              title="Terminal"
               disabled={isTyping}
             />
           </form>

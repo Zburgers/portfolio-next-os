@@ -243,7 +243,6 @@ export default function CalendarPanel({ isVisible }: CalendarPanelProps) {
 
           <div className="calendar-events-section">
             <div className="calendar-events-header">{selectedDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}</div>
-            <p className="calendar-local-note">Local reminders · saved in this browser</p>
             <form className="calendar-reminder-form" onSubmit={addReminder}>
               <input
                 value={draftReminder}

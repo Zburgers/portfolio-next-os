@@ -96,10 +96,9 @@ export interface TerminalConfig {
 }
 
 const makeWelcomeLines = (): TerminalLine[] => [
-  { type: 'output', content: 'Project Next OS profile shell · simulated', timestamp: new Date() },
-  { type: 'output', content: 'Commands run in this page and never access your computer.', timestamp: new Date() },
+  { type: 'output', content: 'Project Next OS', timestamp: new Date() },
   { type: 'output', content: '', timestamp: new Date() },
-  { type: 'success', content: 'Type "help" to see available commands.', timestamp: new Date() },
+  { type: 'success', content: 'Type "help" for commands.', timestamp: new Date() },
 ];
 
 export interface UseTerminalReturn {
@@ -127,7 +126,7 @@ export interface UseTerminalReturn {
 export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
   const {
     username = 'nakshatra',
-    hostname = 'fedora',
+    hostname = 'next-os',
     initialDirectory = '~',
     welcomeLines,
     readOnly = false,
@@ -185,23 +184,22 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
     };
 
     if (readOnly) {
-      addLine('error', 'This profile shell is read-only.');
+      addLine('error', 'Terminal is read-only.');
       finish('error');
       return;
     }
 
     if (trimmed === 'rm -rf /' || trimmed === 'sudo rm -rf /') {
-      addLine('error', 'No host commands run here. This is only a simulated profile shell.');
-      addLine('output', 'Your computer is untouched.');
+      addLine('error', 'rm: permission denied');
       if (statusTimer.current) clearTimeout(statusTimer.current);
       setStatus('panic');
       statusTimer.current = setTimeout(() => setStatus('idle'), 1800);
       return;
     }
 
-    // This shell accepts one local profile command; shell operators are never evaluated.
+    // Reject shell operators; commands are handled individually below.
     if (/[|;&<>`]/.test(trimmed) || trimmed.includes('$(')) {
-      addLine('error', 'This profile shell accepts one command at a time; pipes, redirects, and command substitution are unavailable.');
+      addLine('error', 'Unsupported shell syntax.');
       finish('error');
       return;
     }
@@ -213,11 +211,11 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
     switch (commandKey) {
       case 'help':
         addLines('output', [
-          'Profile shell commands (simulated; no host access):',
+          'Commands:',
           '  help                     Show this list',
           '  ls [path]                List profile or project files',
-          '  cd [path]                Move around the virtual profile tree',
-          '  pwd                      Print the virtual working directory',
+          '  cd [path]                Change directory',
+          '  pwd                      Print the current directory',
           '  cat <file>               Read about.md, experience.md, or links.md',
           '  cat README.md            Read the current project summary',
           '  cat readme <project>     Read a project summary',
@@ -225,9 +223,9 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
           '  open <item>              Open resume, projects, contact, or profile links',
           '  echo <text>              Print text',
           '  whoami, hostname, date, uptime, uname, neofetch, history, clear',
-          '  sudo <command>           Unavailable: this page has no host privileges',
+          '  sudo <command>           Permission denied',
           '',
-          'Run one command per line. Quotes group text; pipes and redirects are unavailable.',
+          'Quotes group text. Shell operators are unsupported.',
         ]);
         break;
 
@@ -256,7 +254,7 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
         const path = normalizeHomePath(inputPath, currentDirectory, username);
         if (path && isVirtualDirectory(path)) setCurrentDirectory(path);
         else {
-          addLine('error', `cd: ${inputPath || '(home)'}: no such directory in the profile tree`);
+          addLine('error', `cd: ${inputPath || '(home)'}: no such directory`);
           commandStatus = 'error';
         }
         break;
@@ -267,7 +265,7 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
         const path = requestedPath ? normalizeHomePath(requestedPath, currentDirectory, username) : currentDirectory;
         const entries = path && isVirtualDirectory(path) ? listDirectory(path) : [];
         if (!entries.length) {
-          addLine('error', `ls: ${requestedPath ?? currentDirectory}: no such directory in the profile tree`);
+          addLine('error', `ls: ${requestedPath ?? currentDirectory}: no such directory`);
           commandStatus = 'error';
         } else addLine('output', entries.join('  '));
         break;
@@ -278,11 +276,11 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
         break;
 
       case 'uptime':
-        addLine('output', `This browser page has been open for ${formatElapsed(performance.now() / 1000)}. Host uptime is not available to a web page.`);
+        addLine('output', `Page uptime: ${formatElapsed(performance.now() / 1000)}`);
         break;
 
       case 'uname':
-        addLine('output', args.includes('-a') ? 'Project Next OS · browser-only profile shell · simulated' : 'Project Next OS (browser simulation)');
+        addLine('output', 'Project Next OS');
         break;
 
       case 'history':
@@ -290,7 +288,7 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
         break;
 
       case 'sudo':
-        addLine('error', 'sudo: host privileges are unavailable in a browser profile shell');
+        addLine('error', 'sudo: permission denied');
         commandStatus = 'error';
         break;
 
@@ -301,8 +299,6 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
           `Role      ${profile.title}`,
           `Location  ${profile.location}`,
           `Focus     ${profile.focus.join(', ')}`,
-          'Shell     simulated browser profile',
-          'Host      not accessible from this page',
         ]);
         break;
 
@@ -378,7 +374,7 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
         } else if (!requested) {
           addLine('output', 'Usage: cat <profile file> | cat README.md | cat readme <project>');
         } else {
-          addLine('error', `cat: ${requested}: no such file in the profile tree`);
+          addLine('error', `cat: ${requested}: no such file`);
           commandStatus = 'error';
         }
         break;
@@ -386,9 +382,9 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
 
       default: {
         const similar = AVAILABLE_COMMANDS.find((candidate) => candidate.startsWith(commandKey));
-        addLine('error', `profile-shell: ${commandName}: command not found`);
+        addLine('error', `${commandName}: command not found`);
         if (similar) addLine('output', `Did you mean: ${similar}?`);
-        addLine('output', 'Type "help" to see the profile shell commands.');
+        addLine('output', 'Type "help" for commands.');
         commandStatus = 'error';
       }
     }

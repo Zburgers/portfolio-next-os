@@ -10,8 +10,8 @@ import { useTerminal } from '@/hooks/useTerminal';
 import { profile } from '@/lib/profile';
 
 const welcomeLines = [
-  { type: 'output' as const, content: 'nakshatra@fedora:~/profile' },
-  { type: 'success' as const, content: 'Profile session ready. Try `help` or run a shortcut below.' },
+  { type: 'output' as const, content: 'nakshatra@next-os:~/profile' },
+  { type: 'success' as const, content: 'Type `help` or choose a shortcut.' },
   { type: 'output' as const, content: '' },
 ];
 
@@ -63,11 +63,10 @@ export default function WelcomeBootstrapper() {
       onPointerMove={handlePointerMove}
       onPointerLeave={() => setMousePos(undefined)}
     >
-      <section className="welcome-console" aria-label="Interactive profile terminal">
+      <section className="welcome-console" aria-label="Terminal">
         <header className="welcome-terminal-bar">
           <div className="welcome-terminal-lights" aria-hidden="true"><i /><i /><i /></div>
-          <span>nakshatra@fedora <b>:</b> ~/profile</span>
-          <span className="welcome-terminal-kind">PROFILE SHELL <span>·</span> 01</span>
+          <span>nakshatra@next-os <b>:</b> ~/profile</span>
         </header>
 
         <div className="welcome-console-body">
@@ -91,7 +90,7 @@ export default function WelcomeBootstrapper() {
                 terminal.setCurrentInput('');
               }}
             >
-              <label htmlFor="profile-command"><span>nakshatra@fedora</span>:<span>{terminal.currentDirectory}</span>$</label>
+              <label htmlFor="profile-command"><span>nakshatra@next-os</span>:<span>{terminal.currentDirectory}</span>$</label>
               <input
                 id="profile-command"
                 value={terminal.currentInput}
@@ -141,7 +140,6 @@ export default function WelcomeBootstrapper() {
             </label>
           </aside>
         </div>
-        <footer className="welcome-terminal-footer"><span>THIS PROFILE SHELL IS SIMULATED</span><span>NO HOST COMMANDS · NO SYSTEM ACCESS</span></footer>
       </section>
     </main>
   );

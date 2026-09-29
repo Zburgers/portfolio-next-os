@@ -147,7 +147,7 @@ export default function SystemMonitor() {
   const sortedWindows = [...windows].sort((a, b) => b.zIndex - a.zIndex);
   const connectionSummary = connection?.effectiveType
     ? `${connection.effectiveType.toUpperCase()}${typeof connection.downlink === 'number' ? ` · ~${connection.downlink} Mbps` : ''}`
-    : 'No connection estimate exposed';
+    : 'No estimate';
   const batteryIcon = battery?.charging ? <BatteryCharging className="h-4 w-4" aria-hidden="true" /> : <Battery className="h-4 w-4" aria-hidden="true" />;
 
   return (
@@ -155,7 +155,7 @@ export default function SystemMonitor() {
       <header className="flex items-center justify-between gap-3 border-b border-[color:var(--color-border)] bg-[color:var(--color-surface-muted)] px-5 py-4">
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 p-2"><Activity className="h-5 w-5 text-white" aria-hidden="true" /></div>
-          <div><h1 className="text-base font-semibold">System Monitor</h1><p className="text-xs text-[color:var(--text-secondary)]">Browser session diagnostics</p></div>
+          <div><h1 className="text-base font-semibold">System Monitor</h1><p className="text-xs text-[color:var(--text-secondary)]">Session status</p></div>
         </div>
         <button type="button" onClick={() => setRefreshKey((key) => key + 1)} className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--color-border)] px-3 py-2 text-xs text-[color:var(--text-secondary)] hover:bg-[color:var(--color-surface)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)]" aria-label="Refresh storage estimate">
           <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" /> Refresh
@@ -179,20 +179,19 @@ export default function SystemMonitor() {
       <main className="min-h-0 flex-1 overflow-y-auto p-5" role="tabpanel" id={`monitor-panel-${activeTab}`} aria-labelledby={`monitor-tab-${activeTab}`}>
         {activeTab === 'overview' ? (
           <div className="space-y-5">
-            <p className="rounded-lg border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] p-3 text-xs text-[color:var(--text-secondary)]">Live values below come from browser APIs. A deployed page cannot read the host Fedora CPU, processes, temperatures, or full-disk usage.</p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <Metric label="Page uptime" value={pageUptime === null ? 'Starting…' : formatUptime(pageUptime)} detail={pageStartedAt ? `This page loaded at ${pageStartedAt.toLocaleTimeString()}` : 'Timing this browser page'} icon={<Clock3 className="h-4 w-4" aria-hidden="true" />} />
+              <Metric label="Page uptime" value={pageUptime === null ? 'Starting…' : formatUptime(pageUptime)} detail={pageStartedAt ? `Since ${pageStartedAt.toLocaleTimeString()}` : undefined} icon={<Clock3 className="h-4 w-4" aria-hidden="true" />} />
               <Metric label="Local time" value={now?.toLocaleTimeString() ?? 'Checking…'} detail={now?.toLocaleDateString(undefined, { dateStyle: 'medium' })} icon={<Clock3 className="h-4 w-4" aria-hidden="true" />} />
-              <Metric label="Connectivity" value={online === null ? 'Checking…' : online ? 'Browser reports online' : 'Browser reports offline'} detail={connectionSummary} icon={<Network className="h-4 w-4" aria-hidden="true" />} />
-              <Metric label="Origin storage" value={storageState === 'loading' ? 'Checking…' : storageState === 'unavailable' ? 'Unavailable' : storageUsage === undefined ? 'Estimate unavailable' : formatBytes(storageUsage)} detail={storageQuota ? `Estimated quota ${formatBytes(storageQuota)} · this site only` : 'Browser estimate for this site, not the device disk'} icon={<HardDrive className="h-4 w-4" aria-hidden="true" />} />
-              <Metric label="Page memory" value={pageMemory ? formatBytes(pageMemory.usedJSHeapSize) : 'Unavailable'} detail={pageMemory ? `JavaScript heap limit ${formatBytes(pageMemory.jsHeapSizeLimit)} · browser-specific` : 'This browser does not expose JavaScript heap measurements'} icon={<Activity className="h-4 w-4" aria-hidden="true" />} />
-              <Metric label="Battery" value={battery ? `${Math.round(battery.level * 100)}%${battery.charging ? ' · charging' : ''}` : batteryAvailable === false ? 'Not exposed' : 'Checking…'} detail="Read-only browser battery status, when permitted" icon={batteryIcon} />
+              <Metric label="Connection" value={online === null ? 'Checking…' : online ? 'Online' : 'Offline'} detail={connectionSummary} icon={<Network className="h-4 w-4" aria-hidden="true" />} />
+              <Metric label="Site storage" value={storageState === 'loading' ? 'Checking…' : storageState === 'unavailable' ? 'Unavailable' : storageUsage === undefined ? 'Estimate unavailable' : formatBytes(storageUsage)} detail={storageQuota ? `Quota ${formatBytes(storageQuota)}` : undefined} icon={<HardDrive className="h-4 w-4" aria-hidden="true" />} />
+              <Metric label="Page memory" value={pageMemory ? formatBytes(pageMemory.usedJSHeapSize) : 'Unavailable'} detail={pageMemory ? `Heap limit ${formatBytes(pageMemory.jsHeapSizeLimit)}` : undefined} icon={<Activity className="h-4 w-4" aria-hidden="true" />} />
+              <Metric label="Battery" value={battery ? `${Math.round(battery.level * 100)}%${battery.charging ? ' · charging' : ''}` : batteryAvailable === false ? 'Unavailable' : 'Checking…'} icon={batteryIcon} />
             </div>
             {storagePercent !== null && (
               <section className="rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4" aria-label="Origin storage estimate">
-                <div className="mb-2 flex items-center justify-between text-sm"><span>Site storage estimate</span><span className="font-mono text-[color:var(--text-secondary)]">{storagePercent.toFixed(1)}%</span></div>
+                <div className="mb-2 flex items-center justify-between text-sm"><span>Site storage</span><span className="font-mono text-[color:var(--text-secondary)]">{storagePercent.toFixed(1)}%</span></div>
                 <div className="h-2 overflow-hidden rounded-full bg-[color:var(--color-surface-muted)]"><div className="h-full rounded-full bg-[color:var(--accent)] transition-[width]" style={{ width: `${storagePercent}%` }} /></div>
-                <p className="mt-2 text-xs text-[color:var(--text-muted)]">{formatBytes(storageUsage!)} used of an estimated {formatBytes(storageQuota!)} origin quota.</p>
+                <p className="mt-2 text-xs text-[color:var(--text-muted)]">{formatBytes(storageUsage!)} used of {formatBytes(storageQuota!)} quota.</p>
               </section>
             )}
           </div>
@@ -214,7 +213,6 @@ export default function SystemMonitor() {
                 })}
               </ul>
             ) : <p className="p-4 text-sm text-[color:var(--text-secondary)]">No desktop app windows are open.</p>}
-            <p className="border-t border-[color:var(--color-border)] p-3 text-xs text-[color:var(--text-muted)]">This list shows windows managed by the portfolio desktop. Browser security does not expose host processes or per-app CPU and memory.</p>
           </section>
         )}
       </main>

@@ -1,0 +1,237 @@
+{
+  "version": 1,
+  "project": {
+    "name": "zburgers-portfolio-nextjs",
+    "productType": "interactive engineering portfolio desktop",
+    "stack": [
+      "nextjs",
+      "react",
+      "tailwind-v4"
+    ]
+  },
+  "sources": {
+    "tokens": [
+      "src/app/globals.css"
+    ],
+    "components": [],
+    "assets": [],
+    "instructions": []
+  },
+  "design": {
+    "colorMode": "light",
+    "colors": {
+      "--background": {
+        "value": "#0e151c",
+        "source": "src/app/globals.css"
+      },
+      "--surface-muted": {
+        "value": "#1b2631",
+        "source": "src/app/globals.css"
+      },
+      "--border": {
+        "value": "rgba(158, 179, 198, 0.14)",
+        "source": "src/app/globals.css"
+      },
+      "--border-hover": {
+        "value": "rgba(158, 179, 198, 0.24)",
+        "source": "src/app/globals.css"
+      },
+      "--text-primary": {
+        "value": "#edf3f7",
+        "source": "src/app/globals.css"
+      },
+      "--text-secondary": {
+        "value": "#bac7d1",
+        "source": "src/app/globals.css"
+      },
+      "--text-muted": {
+        "value": "#91a0ac",
+        "source": "src/app/globals.css"
+      },
+      "--accent": {
+        "value": "#83b7e7",
+        "source": "src/app/globals.css"
+      },
+      "--accent-hover": {
+        "value": "#a6d0f3",
+        "source": "src/app/globals.css"
+      },
+      "--accent-soft": {
+        "value": "rgba(131, 183, 231, 0.12)",
+        "source": "src/app/globals.css"
+      },
+      "--accent-border": {
+        "value": "rgba(131, 183, 231, 0.24)",
+        "source": "src/app/globals.css"
+      },
+      "--glass-border": {
+        "value": "rgba(183, 205, 222, 0.16)",
+        "source": "src/app/globals.css"
+      },
+      "--window-border": {
+        "value": "var(--border)",
+        "source": "src/app/globals.css"
+      },
+      "--sidebar-border": {
+        "value": "var(--glass-border)",
+        "source": "src/app/globals.css"
+      },
+      "--top-bar-border": {
+        "value": "rgba(81, 118, 203, 0.2)",
+        "source": "src/app/globals.css"
+      },
+      "--tw-ring-color": {
+        "value": "var(--accent)",
+        "source": "src/app/globals.css"
+      }
+    },
+    "typography": {
+      "--font-sans": {
+        "value": "var(--font-plex-sans), \"Cantarell\", \"Segoe UI\", system-ui, sans-serif",
+        "source": "src/app/globals.css"
+      },
+      "--font-mono": {
+        "value": "var(--font-plex-mono), \"Fira Code\", ui-monospace, SFMono-Regular, Menlo, monospace",
+        "source": "src/app/globals.css"
+      },
+      "--font-display": {
+        "value": "var(--font-plex-sans), \"Cantarell\", \"Segoe UI\", system-ui, sans-serif",
+        "source": "src/app/globals.css"
+      },
+      "--font-size-xs": {
+        "value": "0.75rem",
+        "source": "src/app/globals.css"
+      },
+      "--font-size-sm": {
+        "value": "0.875rem",
+        "source": "src/app/globals.css"
+      },
+      "--font-size-body": {
+        "value": "1rem",
+        "source": "src/app/globals.css"
+      },
+      "--font-size-lg": {
+        "value": "1.125rem",
+        "source": "src/app/globals.css"
+      },
+      "--font-size-xl": {
+        "value": "1.25rem",
+        "source": "src/app/globals.css"
+      },
+      "--font-size-2xl": {
+        "value": "1.5rem",
+        "source": "src/app/globals.css"
+      },
+      "--font-size-3xl": {
+        "value": "1.875rem",
+        "source": "src/app/globals.css"
+      },
+      "--font-size-4xl": {
+        "value": "2.25rem",
+        "source": "src/app/globals.css"
+      },
+      "--font-weight-normal": {
+        "value": "400",
+        "source": "src/app/globals.css"
+      },
+      "--font-weight-medium": {
+        "value": "500",
+        "source": "src/app/globals.css"
+      },
+      "--font-weight-semibold": {
+        "value": "600",
+        "source": "src/app/globals.css"
+      },
+      "--font-weight-bold": {
+        "value": "700",
+        "source": "src/app/globals.css"
+      }
+    },
+    "spacing": {
+      "--space-xs": {
+        "value": "0.25rem",
+        "source": "src/app/globals.css"
+      },
+      "--space-sm": {
+        "value": "0.5rem",
+        "source": "src/app/globals.css"
+      },
+      "--space-md": {
+        "value": "1rem",
+        "source": "src/app/globals.css"
+      },
+      "--space-lg": {
+        "value": "1.5rem",
+        "source": "src/app/globals.css"
+      },
+      "--space-xl": {
+        "value": "2rem",
+        "source": "src/app/globals.css"
+      },
+      "--space-2xl": {
+        "value": "3rem",
+        "source": "src/app/globals.css"
+      },
+      "--space-3xl": {
+        "value": "4rem",
+        "source": "src/app/globals.css"
+      }
+    },
+    "radius": {
+      "--window-radius": {
+        "value": "14px",
+        "source": "src/app/globals.css"
+      }
+    },
+    "shadows": {
+      "--window-shadow": {
+        "value": "0 30px 90px rgba(2, 8, 14, 0.62)",
+        "source": "src/app/globals.css"
+      }
+    },
+    "motion": {},
+    "density": "compact"
+  },
+  "components": {
+    "installed": ["@pierre/trees"],
+    "preferredPrimitives": [],
+    "patterns": ["Opaque editor and file panes", "Frosted window chrome", "Compact file navigation"]
+  },
+  "constraints": {
+    "must": ["Keep the cursor-reactive Tux mascot", "Support light and dark themes"],
+    "avoid": ["Backdrop blur on text-bearing app panes", "Repeated implementation caveats in app copy"]
+  },
+  "decisions": [
+    {
+      "decision": "Use IBM Plex Sans for interface text and IBM Plex Mono for code. Keep working panes opaque, reserve glass blur for window chrome, and adapt 21st tree-view patterns through the existing @pierre/trees renderer.",
+      "references": [
+        "https://21st.dev/@uilayout.contact/components/tree-code-viewer",
+        "https://21st.dev/@justinlevinedotme/components/file-tree",
+        "https://21st.dev/@bankkroll/components/file-viewer"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "fact": "design.colorMode:light with dark theme variant",
+      "source": "src/app/globals.css"
+    },
+    {
+      "fact": "design.tokens",
+      "source": "src/app/globals.css"
+    },
+    {
+      "fact": "project.stack:nextjs",
+      "source": "package.json"
+    },
+    {
+      "fact": "project.stack:react",
+      "source": "package.json"
+    },
+    {
+      "fact": "project.stack:tailwind-v4",
+      "source": "package.json"
+    }
+  ],
+  "generatedAt": "2026-09-29T12:20:14.036Z"
+}

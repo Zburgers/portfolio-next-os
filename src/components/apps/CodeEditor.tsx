@@ -65,16 +65,16 @@ function formatPushedAt(value: string): string {
 const treeStyle: CSSProperties = {
   height: '100%',
   width: '100%',
-  '--trees-bg-override': 'rgba(21, 25, 34, 0.72)',
-  '--trees-bg-muted-override': 'rgba(118, 141, 183, 0.12)',
+  '--trees-bg-override': '#171b24',
+  '--trees-bg-muted-override': '#222b38',
   '--trees-fg-override': '#dce3ef',
   '--trees-fg-muted-override': '#8995a8',
-  '--trees-border-color-override': 'rgba(255, 255, 255, 0.06)',
-  '--trees-selected-bg-override': 'rgba(116, 155, 225, 0.2)',
+  '--trees-border-color-override': 'rgba(255, 255, 255, 0.08)',
+  '--trees-selected-bg-override': 'rgba(116, 155, 225, 0.16)',
   '--trees-selected-fg-override': '#f4f7ff',
   '--trees-accent-override': '#86a9e8',
-  '--trees-font-family-override': 'ui-monospace, SFMono-Regular, Menlo, monospace',
-  '--trees-font-size-override': '12px',
+  '--trees-font-family-override': 'var(--font-sans)',
+  '--trees-font-size-override': '13px',
 } as CSSProperties;
 
 export default function CodeEditor({ githubUrl, projectName }: CodeEditorProps) {
@@ -294,16 +294,15 @@ export default function CodeEditor({ githubUrl, projectName }: CodeEditorProps) 
         <div className="mx-auto max-w-5xl">
           <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-secondary)]"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Live · public GitHub source</p>
               <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Choose a repository</h2>
-              <p className="mt-2 max-w-xl text-sm text-[color:var(--text-secondary)]">Read the current default branch and inspect source files. This browser never edits remote repositories.</p>
+              <p className="mt-2 max-w-xl text-sm text-[color:var(--text-secondary)]">Choose one to browse its source.</p>
             </div>
             <a className="inline-flex items-center gap-2 text-sm font-medium text-[color:var(--accent)] hover:underline" href={profile.githubUrl} target="_blank" rel="noreferrer">GitHub profile <ArrowUpRight size={15} aria-hidden="true" /></a>
           </div>
 
           <label className="mb-4 flex max-w-lg items-center gap-2 rounded-xl border border-[color:var(--border)] bg-black/5 px-3 py-2.5 focus-within:ring-2 focus-within:ring-[color:var(--accent)]">
             <Search size={16} className="shrink-0 text-[color:var(--text-secondary)]" aria-hidden="true" />
-            <input className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[color:var(--text-secondary)]" placeholder="Filter repositories by name or language" value={repoQuery} onChange={(event) => setRepoQuery(event.target.value)} />
+            <input className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[color:var(--text-secondary)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]" placeholder="Filter repositories by name or language" value={repoQuery} onChange={(event) => setRepoQuery(event.target.value)} />
             <button type="button" className="rounded-md p-1 text-[color:var(--text-secondary)] hover:bg-black/10 disabled:opacity-40" onClick={() => setReposRevision((value) => value + 1)} disabled={reposLoading} aria-label="Refresh repositories" title="Refresh repositories"><RefreshCw size={14} className={reposLoading ? 'animate-spin' : ''} /></button>
           </label>
 
@@ -340,25 +339,24 @@ export default function CodeEditor({ githubUrl, projectName }: CodeEditorProps) 
     );
   }
 
-  const sourceStyle: CSSProperties = { background: 'rgba(14, 17, 24, 0.82)' };
+  const sourceStyle: CSSProperties = { background: '#10131a' };
   const treeEmpty = tree.length === 0 && !treeLoading && !treeError;
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#10131a] text-[#dce3ef]">
-      <header className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-white/[0.07] bg-[#191d27]/90 px-2.5 text-xs backdrop-blur-xl sm:px-3">
+      <header className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-white/[0.08] bg-[#191d27] px-3 text-[13px] sm:px-4">
         <div className="flex min-w-0 items-center gap-2">
-          <button type="button" onClick={switchRepository} aria-label="Choose repository" title="Choose repository" className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[#a9b4c6] hover:bg-white/[0.08] hover:text-white"><ArrowLeft size={15} /></button>
+          <button type="button" onClick={switchRepository} aria-label="Choose repository" title="Choose repository" className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-[#a9b4c6] hover:bg-white/[0.08] hover:text-white"><ArrowLeft size={16} /></button>
           <span className="truncate font-medium text-[#eef2fa]">{projectName || snapshot?.repository || repositoryPath || 'GitHub source'}</span>
-          <span className="hidden text-white/25 sm:inline">/</span>
-          <span className="hidden items-center gap-1.5 text-[#9aa6ba] sm:flex"><GitBranch size={12} aria-hidden="true" />{snapshot?.branch || 'default branch'}</span>
+          {snapshot?.branch && <span className="hidden items-center gap-1.5 rounded-md bg-white/[0.06] px-2 py-1 font-mono text-[12px] text-[#b8c4d6] sm:flex"><GitBranch size={12} aria-hidden="true" />{snapshot.branch}</span>}
           {treeLoading && <Loader2 size={13} className="shrink-0 animate-spin text-[#86a9e8]" aria-label="Refreshing repository" />}
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <button type="button" onClick={() => setExplorerOpen((open) => !open)} className="grid h-7 w-7 place-items-center rounded-lg text-[#a9b4c6] hover:bg-white/[0.08] hover:text-white" aria-label={explorerOpen ? 'Hide file explorer' : 'Show file explorer'} title={explorerOpen ? 'Hide explorer' : 'Show explorer'}>
+          <button type="button" onClick={() => setExplorerOpen((open) => !open)} className="grid h-8 w-8 place-items-center rounded-md text-[#a9b4c6] hover:bg-white/[0.08] hover:text-white" aria-label={explorerOpen ? 'Hide file explorer' : 'Show file explorer'} title={explorerOpen ? 'Hide explorer' : 'Show explorer'}>
             {explorerOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
           </button>
-          <button type="button" onClick={() => setTreeRevision((value) => value + 1)} disabled={treeLoading} className="grid h-7 w-7 place-items-center rounded-lg text-[#a9b4c6] hover:bg-white/[0.08] hover:text-white disabled:opacity-40" aria-label="Refresh repository tree" title="Refresh current branch"><RefreshCw size={14} className={treeLoading ? 'animate-spin' : ''} /></button>
-          {repoUrl && <a className="inline-flex h-7 items-center gap-1.5 rounded-lg px-2 text-[color:var(--accent)] hover:bg-white/[0.08]" href={repoUrl} target="_blank" rel="noreferrer">GitHub <ArrowUpRight size={13} aria-hidden="true" /></a>}
+          <button type="button" onClick={() => setTreeRevision((value) => value + 1)} disabled={treeLoading} className="grid h-8 w-8 place-items-center rounded-md text-[#a9b4c6] hover:bg-white/[0.08] hover:text-white disabled:opacity-40" aria-label="Refresh repository tree" title="Refresh current branch"><RefreshCw size={15} className={treeLoading ? 'animate-spin' : ''} /></button>
+          {repoUrl && <a className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-[color:var(--accent)] hover:bg-white/[0.08]" href={repoUrl} target="_blank" rel="noreferrer">GitHub <ArrowUpRight size={14} aria-hidden="true" /></a>}
         </div>
       </header>
 
@@ -367,16 +365,16 @@ export default function CodeEditor({ githubUrl, projectName }: CodeEditorProps) 
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {explorerOpen && (
-          <aside className="flex min-h-0 w-[min(16rem,43vw)] shrink-0 flex-col border-r border-white/[0.07] bg-[#171b24]/80 backdrop-blur-xl sm:w-64">
-            <div className="shrink-0 border-b border-white/[0.06] px-3 pb-2.5 pt-3">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <h2 className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9ca8ba]">Explorer</h2>
-                <span className="shrink-0 text-[10px] text-[#768196]">{tree.length.toLocaleString()} items</span>
+          <aside className="flex min-h-0 w-[min(18rem,43vw)] shrink-0 flex-col border-r border-white/[0.08] bg-[#171b24] sm:w-72">
+            <div className="shrink-0 border-b border-white/[0.08] px-4 pb-3 pt-3.5">
+              <div className="mb-2.5 flex items-center justify-between gap-2">
+                <h2 className="truncate text-[14px] font-semibold tracking-[-0.01em] text-[#e7edf6]">Files</h2>
+                <span className="shrink-0 text-[12px] tabular-nums text-[#9aa6ba]">{tree.length.toLocaleString()}</span>
               </div>
-              <label className="flex items-center gap-2 rounded-lg border border-white/[0.08] bg-black/20 px-2 py-1.5 focus-within:border-[#86a9e8]/50 focus-within:ring-1 focus-within:ring-[#86a9e8]/30">
-                <Search size={13} className="shrink-0 text-[#77849a]" aria-hidden="true" />
-                <input className="min-w-0 w-full bg-transparent text-[11px] text-[#e5ebf5] outline-none placeholder:text-[#77849a]" placeholder="Filter files" aria-label="Filter repository files" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} />
-                {searchQuery && <button type="button" className="text-[#9ba8bb] hover:text-white" onClick={() => setSearchQuery('')} aria-label="Clear file filter"><X size={13} /></button>}
+              <label className="flex h-9 items-center gap-2 rounded-md border border-white/[0.11] bg-[#10131a] px-2.5 focus-within:border-[#86a9e8]/60 focus-within:ring-1 focus-within:ring-[#86a9e8]/35">
+                <Search size={14} className="shrink-0 text-[#8997ab]" aria-hidden="true" />
+                <input className="min-w-0 w-full bg-transparent text-[13px] text-[#e5ebf5] outline-none placeholder:text-[#8997ab] focus-visible:ring-2 focus-visible:ring-[#86a9e8]" placeholder="Filter files" aria-label="Filter repository files" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} />
+                {searchQuery && <button type="button" className="text-[#9ba8bb] hover:text-white" onClick={() => setSearchQuery('')} aria-label="Clear file filter"><X size={14} /></button>}
               </label>
             </div>
             <div className="min-h-0 flex-1 overflow-auto" aria-label="Repository files">
@@ -390,32 +388,32 @@ export default function CodeEditor({ githubUrl, projectName }: CodeEditorProps) 
         )}
 
         <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#10131a]" aria-label="Source viewer">
-          <div className="flex h-9 shrink-0 items-center gap-2 overflow-x-auto border-b border-white/[0.07] bg-[#171b24]/70">
+          <div className="flex h-10 shrink-0 items-center gap-2 overflow-x-auto border-b border-white/[0.08] bg-[#171b24]">
             {openFiles.length > 0 ? (
               <div role="tablist" aria-label="Open source files" className="flex h-full min-w-0 items-stretch">
                 {openFiles.map((file) => (
                   <div key={file.path} role="presentation" className={`flex max-w-48 min-w-0 items-center border-r border-white/[0.06] ${activeFilePath === file.path ? 'bg-[#10131a] shadow-[inset_0_2px_0_#86a9e8]' : 'bg-transparent hover:bg-white/[0.04]'}`}>
-                    <button type="button" role="tab" aria-selected={activeFilePath === file.path} onClick={() => activateFile(file.path)} className="flex h-full min-w-0 items-center gap-2 px-3 text-[11px] text-[#c8d0dd] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#86a9e8]"><FileCode2 size={13} className="shrink-0 text-[#8ea8d5]" /><span className="truncate">{file.name}</span></button>
+                    <button type="button" role="tab" aria-selected={activeFilePath === file.path} onClick={() => activateFile(file.path)} className="flex h-full min-w-0 items-center gap-2 px-3 text-[13px] text-[#d5ddea] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#86a9e8]"><FileCode2 size={14} className="shrink-0 text-[#8ea8d5]" /><span className="truncate">{file.name}</span></button>
                     <button type="button" onClick={() => closeFile(file.path)} aria-label={`Close ${file.name}`} className="mr-1 grid h-5 w-5 shrink-0 place-items-center rounded text-[#77849a] hover:bg-white/10 hover:text-white"><X size={12} /></button>
                   </div>
                 ))}
               </div>
-            ) : <div className="flex h-full items-center gap-2 px-3 text-[11px] text-[#8995a8]"><FileCode2 size={13} /> No file open</div>}
+            ) : <div className="flex h-full items-center gap-2 px-3 text-[13px] text-[#8995a8]"><FileCode2 size={14} /> No file open</div>}
           </div>
 
           {activeFile ? (
             <>
-              <nav className="flex h-8 shrink-0 items-center gap-1 overflow-x-auto border-b border-white/[0.05] px-3 text-[11px] text-[#9aa6ba]" aria-label="File path">
+              <nav className="flex h-9 shrink-0 items-center gap-1 overflow-x-auto border-b border-white/[0.06] bg-[#10131a] px-3 text-[12px] text-[#acb8ca]" aria-label="File path">
                 {activeFile.path.split('/').map((part, index, parts) => {
                   const path = parts.slice(0, index + 1).join('/') + (index < parts.length - 1 ? '/' : '');
                   return <span key={path} className="flex shrink-0 items-center gap-1">{index > 0 && <span className="text-white/20">/</span>}<button type="button" onClick={() => navigateBreadcrumb(path)} className="rounded px-1 py-0.5 hover:bg-white/[0.07] hover:text-white" aria-current={index === parts.length - 1 ? 'location' : undefined}>{part}</button></span>;
                 })}
-                <span className="ml-auto hidden shrink-0 items-center gap-1 text-[#768196] sm:flex"><Clock3 size={11} />{snapshot ? `Fetched ${new Date(snapshot.fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Live source'}</span>
+                <span className="ml-auto hidden shrink-0 items-center gap-1.5 font-mono text-[11px] text-[#8491a6] sm:flex"><Clock3 size={12} />{snapshot ? `Fetched ${new Date(snapshot.fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Live source'}</span>
               </nav>
               <div className="min-h-0 flex-1 overflow-auto" style={sourceStyle}>
-                <pre className="m-0 min-w-max py-3 font-mono text-[12px] leading-6 text-[#d7deea] sm:text-[12.5px]"><code className="block">{activeFile.content.split('\n').map((line, index) => (
-                  <span className="grid min-h-6 grid-cols-[3.5rem_minmax(0,1fr)] gap-3 pr-6" key={`${activeFile.path}-${index}`}>
-                    <span className="sticky left-0 select-none bg-[#10131a]/95 pl-2 pr-3 text-right text-[#647087]" aria-hidden="true">{index + 1}</span>
+                <pre className="m-0 min-w-max py-4 font-mono text-[13px] leading-[1.7] text-[#d7deea]"><code className="block">{activeFile.content.split('\n').map((line, index) => (
+                  <span className="grid min-h-[22px] grid-cols-[3.5rem_minmax(0,1fr)] gap-3 pr-6" key={`${activeFile.path}-${index}`}>
+                    <span className="sticky left-0 select-none bg-[#10131a] pl-2 pr-3 text-right text-[12px] text-[#77849a]" aria-hidden="true">{index + 1}</span>
                     <span className="whitespace-pre">{line || ' '}</span>
                   </span>
                 ))}</code></pre>
@@ -429,15 +427,15 @@ export default function CodeEditor({ githubUrl, projectName }: CodeEditorProps) 
             <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-[#9aa6ba]" role="status"><Loader2 size={16} className="mr-2 animate-spin text-[#86a9e8]" /> Loading {fileLoadingPath.split('/').pop()} from GitHub…</div>
           ) : (
             <div className="flex min-h-0 flex-1 items-center justify-center p-5 text-center">
-              <div className="max-w-sm"><div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl border border-white/[0.08] bg-white/[0.04] text-[#86a9e8]"><FileCode2 size={22} aria-hidden="true" /></div><p className="text-base font-medium text-[#eef2fa]">Browse the source</p><p className="mt-2 text-sm leading-6 text-[#9aa6ba]">Select a file in the explorer to read its current contents from GitHub. Open files stay available in tabs.</p><p className="mt-4 text-[11px] text-[#768196]">Read-only · UTF-8 text previews up to 250 KB</p></div>
+              <div className="max-w-sm"><p className="text-lg font-medium tracking-[-0.02em] text-[#eef2fa]">Select a file</p><p className="mt-2 text-[13px] text-[#9aa6ba]">Choose a path from the repository.</p><p className="mt-4 font-mono text-[11px] text-[#768196]">GitHub · UTF-8 · 250 KB max</p></div>
             </div>
           )}
         </section>
       </div>
 
-      <footer className="flex h-6 shrink-0 items-center justify-between gap-3 bg-[#283650] px-3 text-[10px] text-[#e4ebf8]">
-        <div className="flex min-w-0 items-center gap-3"><span className="shrink-0">Read-only</span><span className="truncate">{snapshot?.repository || repositoryPath || 'GitHub'}</span><span className="hidden shrink-0 items-center gap-1 sm:flex"><GitBranch size={10} />{snapshot?.branch || '—'}</span></div>
-        <div className="flex shrink-0 items-center gap-3"><span>{activeFile ? `${activeFile.content.split('\n').length} lines` : 'Public source'}</span><span>{snapshot?.fetchedAt ? `Updated ${new Date(snapshot.fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Live data · 30s cache'}</span></div>
+      <footer className="flex h-7 shrink-0 items-center justify-between gap-3 border-t border-white/[0.08] bg-[#202a38] px-3 text-[11px] text-[#d4dfef]">
+        <div className="flex min-w-0 items-center gap-3"><span className="shrink-0">Read only</span><span className="truncate font-mono">{snapshot?.repository || repositoryPath || 'GitHub'}</span><span className="hidden shrink-0 items-center gap-1 font-mono sm:flex">{snapshot?.branch ? <><GitBranch size={11} />{snapshot.branch}</> : null}</span></div>
+        <div className="flex shrink-0 items-center gap-3 font-mono text-[10px]"><span>{activeFile ? `${activeFile.content.split('\n').length} lines` : 'Public source'}</span><span>{snapshot?.fetchedAt ? `Updated ${new Date(snapshot.fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Live · 30s cache'}</span></div>
       </footer>
     </div>
   );

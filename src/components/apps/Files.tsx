@@ -320,7 +320,7 @@ export default function Files() {
 
         <label className="flex h-9 items-center gap-2 rounded-lg border border-color px-2.5 text-secondary focus-within:border-accent">
           <Search size={14} aria-hidden="true" />
-          <input aria-label="Search this folder" type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search here" className="w-24 bg-transparent text-sm text-primary outline-none placeholder:text-muted sm:w-32" />
+          <input aria-label="Search this folder" type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search here" className="w-24 bg-transparent text-sm text-primary outline-none placeholder:text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:w-32" />
         </label>
         <label className="sr-only" htmlFor="files-sort">Sort files</label>
         <select id="files-sort" value={sortBy} onChange={(event) => setSortBy(event.target.value as SortBy)} className="h-9 rounded-lg border border-color bg-surface px-2 text-xs text-secondary" title="Sort files by">
@@ -336,10 +336,10 @@ export default function Files() {
       </header>
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <aside className="hidden w-52 shrink-0 flex-col border-r border-color bg-surface-muted/70 md:flex" aria-label="Places">
+        <aside className="hidden w-56 shrink-0 flex-col border-r border-color bg-surface-muted md:flex" aria-label="Locations">
           <div className="custom-scrollbar flex-1 space-y-6 overflow-y-auto px-3 py-4">
             <section>
-              <h2 className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Places</h2>
+              <h2 className="mb-2 px-2 text-[13px] font-semibold tracking-[-0.01em] text-secondary">Locations</h2>
               <div className="space-y-1">
                 {sidebarDestinations.map(({ icon: Icon, ...destination }) => {
                   const currentPath = pathStack.map((item) => item.name);
@@ -347,18 +347,17 @@ export default function Files() {
                   const isActive = destination.path.length
                     ? destinationPath.every((segment, index) => currentPath[index] === segment)
                     : currentPath.length === 1;
-                  return <button key={destination.label} type="button" onClick={() => navigateSidebar({ icon: Icon, ...destination })} aria-current={isActive ? 'location' : undefined} className={cx('flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors', isActive ? 'bg-accent text-white' : 'text-secondary hover:bg-surface-hover hover:text-primary')}><Icon size={16} aria-hidden="true" /><span>{destination.label}</span></button>;
+                  return <button key={destination.label} type="button" onClick={() => navigateSidebar({ icon: Icon, ...destination })} aria-current={isActive ? 'location' : undefined} className={cx('flex min-h-9 w-full items-center gap-2.5 rounded-md border border-transparent px-3 py-1.5 text-left text-[13px] transition-colors', isActive ? 'border-accent-border bg-accent-soft text-primary' : 'text-secondary hover:bg-surface-hover hover:text-primary')}><Icon size={16} aria-hidden="true" /><span>{destination.label}</span></button>;
                 })}
               </div>
             </section>
             <section>
-              <h2 className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Quick access</h2>
+              <h2 className="mb-2 px-2 text-[13px] font-semibold tracking-[-0.01em] text-secondary">Recent</h2>
               <div className="space-y-1">
-                {recentFiles.map((recent) => <button key={recent.file} type="button" onClick={() => openRecent(recent)} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-secondary hover:bg-surface-hover hover:text-primary"><FileText size={15} aria-hidden="true" /><span className="truncate">{recent.name}</span></button>)}
+                {recentFiles.map((recent) => <button key={recent.file} type="button" onClick={() => openRecent(recent)} className="flex min-h-9 w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-left text-[13px] text-secondary hover:bg-surface-hover hover:text-primary"><FileText size={15} aria-hidden="true" /><span className="truncate">{recent.name}</span></button>)}
               </div>
             </section>
           </div>
-          <p className="border-t border-color px-4 py-3 text-xs leading-5 text-muted">Curated portfolio files live in this browser preview. It cannot read your device storage.</p>
         </aside>
 
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-surface">
@@ -369,7 +368,7 @@ export default function Files() {
                 {selectedNode && <button type="button" onClick={() => openItem(selectedNode)} className="rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white hover:opacity-90">Open</button>}
               </div>
 
-              {filteredItems.length === 0 ? <div className="grid min-h-40 place-content-center rounded-xl border border-dashed border-color bg-surface-muted px-5 text-center"><p className="text-sm font-medium text-secondary">{searchQuery ? 'No matching files' : 'This folder is empty'}</p><p className="mt-1 text-xs text-muted">{searchQuery ? `Nothing in ${currentFolder.name} matches “${searchQuery}”.` : 'Nothing has been saved here in this browser preview.'}</p></div> : viewMode === 'grid' ? (
+              {filteredItems.length === 0 ? <div className="grid min-h-40 place-content-center rounded-xl border border-dashed border-color bg-surface-muted px-5 text-center"><p className="text-sm font-medium text-secondary">{searchQuery ? 'No matching files' : 'Folder is empty'}</p>{searchQuery && <p className="mt-1 text-xs text-muted">Nothing in {currentFolder.name} matches “{searchQuery}”.</p>}</div> : viewMode === 'grid' ? (
                 <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
                   {filteredItems.map((item) => {
                     const { icon: Icon, className } = getNodeIcon(item);
@@ -384,12 +383,12 @@ export default function Files() {
                 </div>
               ) : (
                 <div className="overflow-x-auto rounded-xl border border-color">
-                  <div className="grid min-w-[410px] grid-cols-[minmax(0,1fr)_76px_110px] gap-2 border-b border-color px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted"><span>Name</span><span>Size</span><span>Type</span></div>
+                  <div className="grid min-w-[410px] grid-cols-[minmax(0,1fr)_76px_110px] gap-2 border-b border-color px-3 py-2 text-[11px] font-medium text-muted"><span>Name</span><span>Size</span><span>Type</span></div>
                   {filteredItems.map((item) => {
                     const { icon: Icon, className } = getNodeIcon(item);
                     const key = nodePath(pathStack, item);
                     const selected = key === selectedKey;
-                    return <button key={key} type="button" onClick={() => setSelectedKey(key)} onDoubleClick={() => openItem(item)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); openItem(item); } }} aria-pressed={selected} className={cx('grid w-full min-w-[410px] grid-cols-[minmax(0,1fr)_76px_110px] items-center gap-2 border-b border-color/70 px-3 py-2.5 text-left text-xs last:border-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent', selected ? 'bg-accent-soft' : 'hover:bg-surface-muted')}>
+                    return <button key={key} type="button" onClick={() => setSelectedKey(key)} onDoubleClick={() => openItem(item)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); openItem(item); } }} aria-pressed={selected} className={cx('grid w-full min-w-[410px] grid-cols-[minmax(0,1fr)_76px_110px] items-center gap-2 border-b border-color/70 px-3 py-2.5 text-left text-[13px] last:border-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent', selected ? 'bg-accent-soft' : 'hover:bg-surface-muted')}>
                       <span className="flex min-w-0 items-center gap-2"><Icon size={17} className={className} aria-hidden="true" /><span className="truncate text-primary">{item.name}</span></span><span className="text-muted">{formatSize(item.sizeBytes ?? contentFor(nodePath(pathStack, item), item).length)}</span><span className="truncate text-muted">{getTypeLabel(item)}</span>
                     </button>;
                   })}
@@ -397,19 +396,19 @@ export default function Files() {
               )}
             </section>
 
-            <aside key={savedFileRevision} className="hidden w-60 shrink-0 flex-col border-l border-color bg-surface-muted/50 p-4 md:flex" aria-label="File preview">
+            <aside key={savedFileRevision} className="hidden w-60 shrink-0 flex-col border-l border-color bg-surface-muted p-4 md:flex" aria-label="File preview">
               {selectedNode ? <>
                 <div className="flex min-h-7 items-center justify-between gap-2"><span className="truncate text-xs font-semibold text-primary" title={selectedNode.name}>{selectedNode.name}</span><span className="shrink-0 text-[10px] text-muted">{getTypeLabel(selectedNode)}</span></div>
                 {selectedNode.type === 'folder' ? <div className="grid flex-1 place-content-center text-center"><Folder size={30} className="mx-auto text-amber-500" /><p className="mt-3 text-sm font-medium text-primary">{selectedNode.children?.length ?? 0} items</p><button type="button" onClick={() => openItem(selectedNode)} className="mt-3 text-xs font-semibold text-accent hover:underline">Open folder</button></div>
-                  : selectedNode.imageUrl ? <div className="mt-4 flex-1 overflow-auto"><a href={selectedNode.imageUrl} target="_blank" rel="noreferrer" aria-label={`Open full image ${selectedNode.name}`}><img src={selectedNode.imageUrl} alt={selectedNode.imageAlt ?? `${selectedNode.name} preview`} className="max-h-56 w-full rounded-lg border border-color bg-surface object-contain" /></a><p className="mt-2 text-xs leading-5 text-muted">Repository screenshot preview. Select Open to view the full image.</p></div>
+                  : selectedNode.imageUrl ? <div className="mt-4 flex-1 overflow-auto"><a href={selectedNode.imageUrl} target="_blank" rel="noreferrer" aria-label={`Open full image ${selectedNode.name}`}><img src={selectedNode.imageUrl} alt={selectedNode.imageAlt ?? `${selectedNode.name} preview`} className="max-h-56 w-full rounded-lg border border-color bg-surface object-contain" /></a></div>
                     : selectedNode.extension === 'url' ? <div className="mt-4 grid flex-1 place-content-center text-center"><ExternalLink size={24} className="mx-auto text-accent" /><p className="mt-3 break-all text-xs text-secondary">{selectedNode.externalUrl}</p><button type="button" onClick={() => openItem(selectedNode)} className="mt-3 text-xs font-semibold text-accent hover:underline">Open link</button></div>
                       : selectedNode.extension === 'pdf' ? <div className="mt-4 grid flex-1 place-content-center text-center"><FileText size={28} className="mx-auto text-red-500" /><p className="mt-3 text-xs text-secondary">August 2026 résumé</p><button type="button" onClick={() => openItem(selectedNode)} className="mt-3 text-xs font-semibold text-accent hover:underline">Open PDF</button></div>
-                        : <div className="custom-scrollbar mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-color bg-surface p-3"><pre className="whitespace-pre-wrap break-words font-mono text-[10px] leading-5 text-secondary">{selectedContent}</pre></div>}
-                <button type="button" onClick={() => openItem(selectedNode)} className="mt-3 flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-color bg-surface text-xs font-semibold text-secondary hover:bg-surface-hover hover:text-primary">{selectedNode.externalUrl ? 'Open link' : selectedNode.imageUrl ? 'Open image' : selectedNode.type === 'folder' ? 'Open folder' : 'Open in editor'}<ExternalLink size={13} aria-hidden="true" /></button>
+                        : <div className="custom-scrollbar mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-color bg-surface p-3"><pre className="whitespace-pre-wrap break-words font-mono text-[12px] leading-5 text-secondary">{selectedContent}</pre></div>}
+                <button type="button" onClick={() => openItem(selectedNode)} className="mt-3 flex h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-color bg-surface px-3 text-[13px] font-medium text-secondary hover:bg-surface-hover hover:text-primary">{selectedNode.externalUrl ? 'Open link' : selectedNode.imageUrl ? 'Open image' : selectedNode.type === 'folder' ? 'Open folder' : 'Open in editor'}<ExternalLink size={14} aria-hidden="true" /></button>
               </> : <div className="grid flex-1 place-content-center text-center"><FileText size={28} className="mx-auto text-muted" /><p className="mt-3 text-sm font-medium text-secondary">Preview</p><p className="mt-1 max-w-40 text-xs leading-5 text-muted">Select a file or folder to inspect it.</p></div>}
             </aside>
           </div>
-          <footer className="flex items-center justify-between border-t border-color px-4 py-2 text-xs text-muted"><span>{selectedNode ? `Selected: ${selectedNode.name}` : `${filteredItems.length} ${filteredItems.length === 1 ? 'item' : 'items'}`}</span><span>Browser-local preview · no host filesystem access</span></footer>
+          <footer className="flex items-center justify-between border-t border-color px-4 py-2 text-xs text-muted"><span>{selectedNode ? `Selected: ${selectedNode.name}` : `${filteredItems.length} ${filteredItems.length === 1 ? 'item' : 'items'}`}</span><span>{currentItems.length} {currentItems.length === 1 ? 'item' : 'items'}</span></footer>
         </main>
       </div>
     </div>

@@ -37,11 +37,10 @@ export default function ControlCenter({ isVisible }: ControlCenterProps) {
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold">Quick settings</h2>
-            <p className="mt-0.5 text-xs text-[var(--text-muted)]">This page can’t control your Fedora radios.</p>
           </div>
           <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs">
             {online ? <Wifi size={14} className="text-emerald-500" /> : <WifiOff size={14} className="text-amber-500" />}
-            Browser {online ? 'online' : 'offline'}
+            {online ? 'Online' : 'Offline'}
           </span>
         </div>
 
@@ -65,7 +64,7 @@ export default function ControlCenter({ isVisible }: ControlCenterProps) {
 
         <div className="mt-3 grid grid-cols-2 gap-2">
           <button type="button" onClick={() => open('system-monitor', 'System Monitor')} className="quick-settings-action">
-            <Monitor size={16} aria-hidden="true" /> Browser monitor
+            <Monitor size={16} aria-hidden="true" /> System monitor
           </button>
           <button type="button" onClick={() => open('settings', 'Settings')} className="quick-settings-action">
             <Settings size={16} aria-hidden="true" /> Settings

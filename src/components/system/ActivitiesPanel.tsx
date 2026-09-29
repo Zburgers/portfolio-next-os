@@ -90,7 +90,7 @@ const apps: App[] = [
     },
     appType: 'terminal',
     title: 'Terminal',
-    description: 'Try commands in the simulated profile shell',
+    description: 'Run commands',
   },
   {
     id: 'code',
@@ -134,7 +134,7 @@ const apps: App[] = [
     },
     appType: 'system-monitor',
     title: 'System Monitor',
-    description: 'Live browser and page diagnostics',
+    description: 'Session status',
   },
   {
     id: 'trash',
