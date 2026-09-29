@@ -2,168 +2,70 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import {
-  TerminalSquare,
-  Settings2,
-  Gauge,
-} from 'lucide-react';
+import { FileText, Gauge, Settings2, TerminalSquare, Trash2 } from 'lucide-react';
 import { useDesktop } from '@/context/DesktopContext';
+import { desktopApps, type DesktopApp } from '@/lib/desktop-apps';
 
-interface App {
-  id: string;
-  name: string;
-  icon: React.ReactNode;
-  appType: string;
-  title: string;
-}
+const iconComponents = { TerminalSquare, Settings2, Gauge, Trash2, FileText };
 
-const apps: App[] = [
-  {
-    id: 'files',
-    name: 'Files',
-    icon: (
-      <Image
-  src="/dock/files.svg"
-        alt="Files"
-        width={32}
-        height={32}
-        className="h-8 w-8 rounded-xl shadow-[0_8px_18px_rgba(15,23,42,0.25)]"
-      />
-    ),
-    appType: 'files',
-    title: 'Files'
-  },
-  {
-    id: 'portfolio',
-    name: 'Portfolio',
-    icon: (
-      <Image
-  src="/dock/portfolio.svg"
-        alt="Portfolio"
-        width={32}
-        height={32}
-        className="h-8 w-8 rounded-xl shadow-[0_8px_18px_rgba(15,23,42,0.25)]"
-      />
-    ),
-    appType: 'portfolio',
-    title: 'Portfolio'
-  },
-  {
-    id: 'terminal',
-    name: 'Terminal',
-    icon: (
-      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#18181b] text-white shadow-[0_8px_18px_rgba(15,23,42,0.25)]">
-        <TerminalSquare className="h-5 w-5" />
-      </div>
-    ),
-    appType: 'terminal',
-    title: 'Terminal'
-  },
-  {
-    id: 'code',
-    name: 'Code Editor',
-    icon: (
-      <Image
-  src="/dock/code.svg"
-        alt="Code Editor"
-        width={32}
-        height={32}
-        className="h-8 w-8 rounded-xl shadow-[0_8px_18px_rgba(15,23,42,0.25)]"
-      />
-    ),
-    appType: 'code-editor',
-    title: 'Code Editor'
-  },
-  {
-    id: 'settings',
-    name: 'Settings',
-    icon: (
-      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#60a5fa] via-[#6366f1] to-[#a855f7] text-white shadow-[0_8px_18px_rgba(15,23,42,0.25)]">
-        <Settings2 className="h-5 w-5" />
-      </div>
-    ),
-    appType: 'settings',
-    title: 'Settings'
-  },
-  {
-    id: 'system-monitor',
-    name: 'Monitor',
-    icon: (
-      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-[0_8px_18px_rgba(15,23,42,0.25)]">
-        <Gauge className="h-5 w-5" />
-      </div>
-    ),
-    appType: 'system-monitor',
-    title: 'System Monitor'
+function AppIcon({ app }: { app: DesktopApp }) {
+  if (app.iconType === 'image' && app.iconSrc) {
+    return <Image src={app.iconSrc} alt="" width={44} height={44} className="h-11 w-11 rounded-[14px] object-cover" />;
   }
-];
+  const Icon = app.iconComponent && iconComponents[app.iconComponent as keyof typeof iconComponents];
+  return (
+    <span className={['flex h-11 w-11 items-center justify-center rounded-[14px] text-white shadow-lg', app.iconGradient || 'bg-slate-700'].join(' ')}>
+      {Icon ? <Icon className="h-6 w-6" strokeWidth={1.8} /> : <FileText className="h-6 w-6" />}
+    </span>
+  );
+}
 
 export default function Dock() {
   const { windows, activeWindowId, openWindow, focusWindow, updateWindow } = useDesktop();
   const [hoveredApp, setHoveredApp] = useState<string | null>(null);
-  const [isDockHovered, setIsDockHovered] = useState(false);
 
-  const handleAppClick = (app: App) => {
-    // Check if app is already open
-    const existingWindow = windows.find(w => w.type === app.appType);
-    
-    if (existingWindow) {
-      // If window exists but is minimized, restore it
-      if (existingWindow.minimized) {
-        updateWindow(existingWindow.id, { minimized: false });
-        focusWindow(existingWindow.id);
-      } else {
-        // Just focus the existing window
-        focusWindow(existingWindow.id);
-      }
-    } else {
-      // Open new window
-      openWindow(app.appType, app.title);
+  const handleAppClick = (app: DesktopApp) => {
+    const existing = windows
+      .filter((window) => window.type === app.appType)
+      .sort((a, b) => Number(b.id === activeWindowId) - Number(a.id === activeWindowId) || Number(a.minimized) - Number(b.minimized) || b.zIndex - a.zIndex)[0];
+
+    if (existing) {
+      if (existing.minimized) updateWindow(existing.id, { minimized: false });
+      focusWindow(existing.id);
+      return;
     }
+    openWindow(app.appType, app.title);
   };
 
   return (
-    <>
-      {/* Invisible hover trigger zone at bottom of screen */}
-      <div 
-        className="fixed bottom-0 left-0 right-0 h-3 z-40"
-        onMouseEnter={() => setIsDockHovered(true)}
-      />
-      
-      {/* Dock container */}
-      <div 
-        className={`dock-wrapper ${isDockHovered ? 'dock-visible' : 'dock-hidden'}`}
-        onMouseEnter={() => setIsDockHovered(true)}
-        onMouseLeave={() => setIsDockHovered(false)}
-      >
-        <div className="dock-container">
-          {apps.map((app) => {
-            const focusedWindow = windows.find((w) => w.type === app.appType && !w.minimized);
-            const active = focusedWindow?.id === activeWindowId;
-            const hovered = hoveredApp === app.id;
-
-            return (
-              <div key={app.id} className="dock-item">
-                <div className={`dock-tooltip ${hovered ? 'dock-tooltip-visible' : ''}`}>
-                  {app.name}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleAppClick(app)}
-                  onMouseEnter={() => setHoveredApp(app.id)}
-                  onMouseLeave={() => setHoveredApp(null)}
-                  className={`dock-button ${hovered ? 'dock-button-hovered' : ''} ${active ? 'dock-button-active' : ''}`}
-                >
-                  <span className="dock-icon">
-                    {app.icon}
-                  </span>
-                </button>
-                <div className={`dock-indicator ${active ? 'dock-indicator-active' : ''} ${active && hovered ? 'dock-indicator-hovered' : ''}`} />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </>
+    <div className="dock-wrapper dock-visible">
+      <nav className="dock-container" aria-label="Applications">
+        {desktopApps.map((app) => {
+          const running = windows.some((window) => window.type === app.appType);
+          const active = windows.some((window) => window.id === activeWindowId && window.type === app.appType && !window.minimized);
+          const hovered = hoveredApp === app.id;
+          return (
+            <div key={app.id} className="dock-item">
+              <span className={['dock-tooltip', hovered ? 'dock-tooltip-visible' : ''].join(' ')} aria-hidden="true">{app.name}</span>
+              <button
+                type="button"
+                onClick={() => handleAppClick(app)}
+                onMouseEnter={() => setHoveredApp(app.id)}
+                onMouseLeave={() => setHoveredApp(null)}
+                onFocus={() => setHoveredApp(app.id)}
+                onBlur={() => setHoveredApp(null)}
+                className={['dock-button', hovered ? 'dock-button-hovered' : '', active ? 'dock-button-active' : ''].join(' ')}
+                aria-label={'Open ' + app.name + (running ? ', running' : '')}
+                aria-current={active ? 'page' : undefined}
+                title={app.name}
+              >
+                <span className="dock-icon"><AppIcon app={app} /></span>
+              </button>
+              <span className={['dock-indicator', running ? 'dock-indicator-running' : '', active ? 'dock-indicator-active' : ''].join(' ')} aria-hidden="true" />
+            </div>
+          );
+        })}
+      </nav>
+    </div>
   );
 }

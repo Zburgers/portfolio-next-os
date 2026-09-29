@@ -74,9 +74,18 @@ export default function Portfolio({ initialTab = 'overview' }: { initialTab?: Po
     <div className="portfolio-app">
       <nav className="portfolio-nav" aria-label="Portfolio sections">
         <span className="portfolio-wordmark">NK<span>.</span></span>
-        <div className="portfolio-tabs">
+        <div className="portfolio-tabs" role="tablist" aria-label="Profile pages" onKeyDown={(event) => {
+          const current = tabs.findIndex((tab) => tab.id === activeTab);
+          const key = event.key;
+          if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return;
+          event.preventDefault();
+          const next = key === 'Home' ? 0 : key === 'End' ? tabs.length - 1 : (current + (key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+          const target = tabs[next];
+          setActiveTab(target.id);
+          document.getElementById(`portfolio-tab-${target.id}`)?.focus();
+        }}>
           {tabs.map((tab) => (
-            <button key={tab.id} type="button" aria-current={activeTab === tab.id ? 'page' : undefined} className={activeTab === tab.id ? 'is-active' : ''} onClick={() => setActiveTab(tab.id)}>
+            <button key={tab.id} id={`portfolio-tab-${tab.id}`} role="tab" aria-controls="portfolio-panel" aria-selected={activeTab === tab.id} tabIndex={activeTab === tab.id ? 0 : -1} type="button" className={activeTab === tab.id ? 'is-active' : ''} onClick={() => setActiveTab(tab.id)}>
               {tab.label}
             </button>
           ))}
@@ -86,7 +95,7 @@ export default function Portfolio({ initialTab = 'overview' }: { initialTab?: Po
         </a>
       </nav>
 
-      <main className="portfolio-content">
+      <main id="portfolio-panel" role="tabpanel" aria-labelledby={`portfolio-tab-${activeTab}`} tabIndex={0} className="portfolio-content">
         {activeTab === 'overview' && (
           <>
             <section className="portfolio-overview">

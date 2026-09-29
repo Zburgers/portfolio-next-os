@@ -41,7 +41,7 @@ export default function AppContent({ window }: AppContentProps) {
       return <Settings />;
     
     case 'text-editor':
-      return <TextEditor initialFileName={payload?.fileName} initialContent={payload?.content} />;
+      return <TextEditor initialFileName={payload?.fileName} initialFilePath={payload?.filePath} initialContent={payload?.content} />;
     
     case 'welcome':
       return <WelcomeBootstrapper />;

@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Window as WindowType, useDesktop } from '@/context/DesktopContext';
 import AppContent from './AppContent';
 
@@ -20,13 +19,9 @@ export default function Window({ window: windowData }: WindowProps) {
   const windowRef = useRef<HTMLDivElement>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const resizeStartRef = useRef({ width: 0, height: 0, startX: 0, startY: 0 });
-  const previousBoundsRef = useRef({
-    x: windowData.x,
-    y: windowData.y,
-    width: windowData.width,
-    height: windowData.height,
-  });
+  const previousBoundsRef = useRef({ x: windowData.x, y: windowData.y, width: windowData.width, height: windowData.height });
   const latestWindowRef = useRef(windowData);
+  const isActive = activeWindowId === windowData.id;
 
   useEffect(() => {
     latestWindowRef.current = windowData;
@@ -34,274 +29,159 @@ export default function Window({ window: windowData }: WindowProps) {
 
   useEffect(() => {
     if (!windowData.maximized && !isDragging && !isResizing) {
-      previousBoundsRef.current = {
-        x: windowData.x,
-        y: windowData.y,
-        width: windowData.width,
-        height: windowData.height,
-      };
+      previousBoundsRef.current = { x: windowData.x, y: windowData.y, width: windowData.width, height: windowData.height };
     }
   }, [windowData.x, windowData.y, windowData.width, windowData.height, windowData.maximized, isDragging, isResizing]);
 
-  const isActive = activeWindowId === windowData.id;
-
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isDragging) {
-        const currentWindow = latestWindowRef.current;
-        const viewportWidth = typeof globalThis !== 'undefined' && typeof globalThis.innerWidth === 'number' ? globalThis.innerWidth : 1280;
-        const viewportHeight = typeof globalThis !== 'undefined' && typeof globalThis.innerHeight === 'number' ? globalThis.innerHeight : 720;
-        const padding = 16;
-        
-        // Get top bar height from CSS variable dynamically
-        const topBarHeight = typeof globalThis !== 'undefined' && globalThis.getComputedStyle 
-          ? parseInt(globalThis.getComputedStyle(document.documentElement).getPropertyValue('--top-bar-height')) || 44
-          : 44;
-        
-        const nodeWidth = windowRef.current?.offsetWidth ?? currentWindow.width;
-        const nodeHeight = windowRef.current?.offsetHeight ?? currentWindow.height;
-        const maxX = viewportWidth - nodeWidth - padding;
-        const maxY = viewportHeight - nodeHeight - padding;
-        
-        // Constrain window to not go above the top bar
-        const newX = clamp(e.clientX - dragOffsetRef.current.x, padding, Math.max(padding, maxX));
-        const newY = clamp(e.clientY - dragOffsetRef.current.y, topBarHeight, Math.max(topBarHeight, maxY));
+    const handlePointerMove = (event: PointerEvent) => {
+      const current = latestWindowRef.current;
+      const padding = 12;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const topBarHeight = Number.parseInt(getComputedStyle(document.documentElement).getPropertyValue('--top-bar-height'), 10) || 44;
 
-        updateWindow(currentWindow.id, {
-          x: Math.round(newX),
-          y: Math.round(newY),
+      if (isDragging) {
+        const nodeWidth = windowRef.current?.offsetWidth ?? current.width;
+        const nodeHeight = windowRef.current?.offsetHeight ?? current.height;
+        updateWindow(current.id, {
+          x: Math.round(clamp(event.clientX - dragOffsetRef.current.x, padding, Math.max(padding, viewportWidth - nodeWidth - padding))),
+          y: Math.round(clamp(event.clientY - dragOffsetRef.current.y, topBarHeight, Math.max(topBarHeight, viewportHeight - nodeHeight - padding))),
         });
       }
 
       if (isResizing) {
-        const currentWindow = latestWindowRef.current;
-        const viewportWidth = typeof globalThis !== 'undefined' && typeof globalThis.innerWidth === 'number' ? globalThis.innerWidth : 1280;
-        const viewportHeight = typeof globalThis !== 'undefined' && typeof globalThis.innerHeight === 'number' ? globalThis.innerHeight : 720;
-        const padding = 16;
-        const minWidth = 520;
-        const minHeight = 360;
-        const deltaX = e.clientX - resizeStartRef.current.startX;
-        const deltaY = e.clientY - resizeStartRef.current.startY;
-        const desiredWidth = resizeStartRef.current.width + deltaX;
-        const desiredHeight = resizeStartRef.current.height + deltaY;
-        const maxWidth = viewportWidth - currentWindow.x - padding;
-        const maxHeight = viewportHeight - currentWindow.y - padding;
-
-        updateWindow(currentWindow.id, {
-          width: Math.round(clamp(desiredWidth, minWidth, maxWidth)),
-          height: Math.round(clamp(desiredHeight, minHeight, maxHeight)),
+        const maxWidth = Math.max(240, viewportWidth - current.x - padding);
+        const maxHeight = Math.max(200, viewportHeight - current.y - padding);
+        updateWindow(current.id, {
+          width: Math.round(clamp(resizeStartRef.current.width + event.clientX - resizeStartRef.current.startX, Math.min(480, maxWidth), maxWidth)),
+          height: Math.round(clamp(resizeStartRef.current.height + event.clientY - resizeStartRef.current.startY, Math.min(320, maxHeight), maxHeight)),
         });
       }
     };
 
-    const handleMouseUp = () => {
+    const stopPointerAction = () => {
       setIsDragging(false);
       setIsResizing(false);
     };
 
     if (isDragging || isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('pointermove', handlePointerMove);
+      document.addEventListener('pointerup', stopPointerAction);
+      document.addEventListener('pointercancel', stopPointerAction);
     }
-
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('pointerup', stopPointerAction);
+      document.removeEventListener('pointercancel', stopPointerAction);
     };
   }, [isDragging, isResizing, updateWindow]);
 
-  const handleMouseDown = () => focusWindow(windowData.id);
-
-  const handleTitleBarMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (windowData.maximized) {
-      return;
-    }
-    dragOffsetRef.current = {
-      x: e.clientX - windowData.x,
-      y: e.clientY - windowData.y,
-    };
+  const handleTitleBarPointerDown = (event: React.PointerEvent<HTMLElement>) => {
+    if ((event.target as HTMLElement).closest('button') || windowData.maximized) return;
+    event.preventDefault();
+    dragOffsetRef.current = { x: event.clientX - windowData.x, y: event.clientY - windowData.y };
     setIsDragging(true);
     focusWindow(windowData.id);
   };
 
-  const handleResizeMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    resizeStartRef.current = {
-      width: windowData.width,
-      height: windowData.height,
-      startX: e.clientX,
-      startY: e.clientY,
-    };
+  const handleResizePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    resizeStartRef.current = { width: windowData.width, height: windowData.height, startX: event.clientX, startY: event.clientY };
     setIsResizing(true);
+    focusWindow(windowData.id);
   };
 
   const handleClose = () => {
     setIsClosing(true);
-    setTimeout(() => {
-      closeWindow(windowData.id);
-    }, 200);
+    window.setTimeout(() => closeWindow(windowData.id), 160);
   };
 
   const handleMaximize = () => {
     if (windowData.maximized) {
-      const previous = previousBoundsRef.current;
-      updateWindow(windowData.id, {
-        maximized: false,
-        x: previous.x,
-        y: previous.y,
-        width: previous.width,
-        height: previous.height,
-      });
-    } else {
-      const screenWidth = typeof globalThis !== 'undefined' && typeof globalThis.innerWidth === 'number' ? globalThis.innerWidth : 1200;
-      const screenHeight = typeof globalThis !== 'undefined' && typeof globalThis.innerHeight === 'number' ? globalThis.innerHeight : 800;
-      
-      // Get top bar height from CSS variable dynamically
-      const topBarHeight = typeof globalThis !== 'undefined' && globalThis.getComputedStyle 
-        ? parseInt(globalThis.getComputedStyle(document.documentElement).getPropertyValue('--top-bar-height')) || 44
-        : 44;
-      
-      previousBoundsRef.current = {
-        x: windowData.x,
-        y: windowData.y,
-        width: windowData.width,
-        height: windowData.height,
-      };
-
-      updateWindow(windowData.id, {
-        maximized: true,
-        x: 12,
-        y: topBarHeight,
-        width: screenWidth - 24,
-        height: screenHeight - topBarHeight - 12,
-      });
+      updateWindow(windowData.id, { maximized: false, ...previousBoundsRef.current });
+      return;
     }
+    const topBarHeight = Number.parseInt(getComputedStyle(document.documentElement).getPropertyValue('--top-bar-height'), 10) || 44;
+    previousBoundsRef.current = { x: windowData.x, y: windowData.y, width: windowData.width, height: windowData.height };
+    updateWindow(windowData.id, {
+      maximized: true,
+      x: 12,
+      y: topBarHeight,
+      width: Math.max(240, window.innerWidth - 24),
+      height: Math.max(200, window.innerHeight - topBarHeight - 12),
+    });
   };
 
-  const handleMinimize = () => {
-    updateWindow(windowData.id, { minimized: true });
+  const handleMinimize = () => updateWindow(windowData.id, { minimized: true });
+
+  const handleResizeKey = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    const step = event.shiftKey ? 40 : 12;
+    const sizes: Record<string, { width?: number; height?: number }> = {
+      ArrowLeft: { width: -step },
+      ArrowRight: { width: step },
+      ArrowUp: { height: -step },
+      ArrowDown: { height: step },
+    };
+    const delta = sizes[event.key];
+    if (!delta) return;
+    event.preventDefault();
+    const maxWidth = Math.max(240, window.innerWidth - windowData.x - 12);
+    const maxHeight = Math.max(200, window.innerHeight - windowData.y - 12);
+    updateWindow(windowData.id, {
+      width: clamp(windowData.width + (delta.width || 0), Math.min(320, maxWidth), maxWidth),
+      height: clamp(windowData.height + (delta.height || 0), Math.min(240, maxHeight), maxHeight),
+    });
   };
 
-  if (windowData.minimized) {
-    return null;
-  }
+  if (windowData.minimized) return null;
 
   return (
     <motion.div
       ref={windowRef}
-      initial={{ opacity: 0, scale: 0.95, y: 20 }}
-      animate={{ 
-        opacity: isClosing ? 0 : 1, 
-        scale: isClosing ? 0.95 : 1, 
-        y: isClosing ? 10 : 0,
-        transition: { 
-          type: "spring", 
-          stiffness: 400, 
-          damping: 30,
-          duration: 0.2
-        }
-      }}
-      className={`fixed rounded-2xl overflow-hidden border backdrop-blur-xl bg-glass-bg ${
-        isActive
-          ? 'border-accent shadow-window-active'
-          : 'border-glass-border shadow-window'
-      }`}
-      style={{
-        left: windowData.x,
-        top: windowData.y,
-        width: windowData.width,
-        height: windowData.height,
-        zIndex: windowData.zIndex,
-      }}
-      onMouseDown={handleMouseDown}
+      role="dialog"
+      aria-label={windowData.title}
+      aria-modal={false}
+      tabIndex={-1}
+      initial={{ opacity: 0, scale: 0.97, y: 12 }}
+      animate={{ opacity: isClosing ? 0 : 1, scale: isClosing ? 0.97 : 1, y: isClosing ? 8 : 0 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 32, duration: 0.18 }}
+      className={['window-shell', isActive ? 'window-shell-active' : ''].join(' ')}
+      style={{ left: windowData.x, top: windowData.y, width: windowData.width, height: windowData.height, zIndex: windowData.zIndex }}
+      onPointerDown={() => focusWindow(windowData.id)}
     >
-      {/* Modern Title Bar */}
-      <div
-        className={`titlebar h-12 flex items-center justify-between px-4 cursor-move select-none bg-glass-bg/50 backdrop-blur-sm border-b border-glass-border transition-colors duration-200 ${
-          isActive 
-            ? 'bg-glass-bg/70' 
-            : 'bg-glass-bg/30'
-        }`}
-        onMouseDown={handleTitleBarMouseDown}
-        onDoubleClick={handleMaximize}
+      <header
+        className="window-titlebar"
+        onPointerDown={handleTitleBarPointerDown}
+        onDoubleClick={(event) => {
+          if (!(event.target as HTMLElement).closest('button')) handleMaximize();
+        }}
       >
-        <div className="flex items-center space-x-3">
-          <motion.span 
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-text-primary text-base font-medium"
-          >
-            {windowData.title}
-          </motion.span>
+        <div className="window-controls" aria-label="Window controls">
+          <button type="button" className="window-control window-control-close" onClick={handleClose} aria-label={'Close ' + windowData.title} title="Close"><span>×</span></button>
+          <button type="button" className="window-control window-control-minimize" onClick={handleMinimize} aria-label={'Minimize ' + windowData.title} title="Minimize"><span>−</span></button>
+          <button type="button" className="window-control window-control-maximize" onClick={handleMaximize} aria-label={windowData.maximized ? 'Restore window' : 'Maximize window'} title={windowData.maximized ? 'Restore' : 'Maximize'}><span>{windowData.maximized ? '↙' : '+'}</span></button>
         </div>
+        <span className="window-title">{windowData.title}</span>
+        <span className="window-titlebar-spacer" aria-hidden="true" />
+      </header>
 
-        {/* macOS-style Traffic Light Controls on Right */}
-        <div className="flex items-center" style={{ gap: '10px' }}>
-          {/* Minimize Button - Yellow */}
-          <motion.button
-            whileHover={{ scale: 1.15 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleMinimize}
-            className="w-7 h-7 rounded-full bg-yellow-400 hover:bg-yellow-300 flex items-center justify-center transition-colors duration-200 group"
-            title="Minimize"
-          >
-            <div className="w-3.5 h-0.5 bg-yellow-800 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-          </motion.button>
-          
-          {/* Maximize Button - Green */}
-          <motion.button
-            whileHover={{ scale: 1.15 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleMaximize}
-            className="w-7 h-7 rounded-full bg-green-400 hover:bg-green-300 flex items-center justify-center transition-colors duration-200 group"
-            title={windowData.maximized ? 'Restore' : 'Maximize'}
-          >
-            {windowData.maximized ? (
-              <div className="w-3 h-3 border-2 border-green-800 opacity-0 group-hover:opacity-100 transition-opacity duration-200 relative">
-                <div className="absolute -top-1 -right-1 w-3 h-3 border-2 border-green-800 bg-green-400"></div>
-              </div>
-            ) : (
-              <div className="w-3 h-3 border-2 border-green-800 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-            )}
-          </motion.button>
-          
-          {/* Close Button - Red */}
-          <motion.button
-            whileHover={{ scale: 1.15 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleClose}
-            className="w-7 h-7 rounded-full bg-red-400 hover:bg-red-300 flex items-center justify-center transition-colors duration-200 group"
-            title="Close"
-          >
-            <div className="relative w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-4 h-0.5 bg-red-800 rotate-45 absolute"></div>
-                <div className="w-4 h-0.5 bg-red-800 -rotate-45 absolute"></div>
-              </div>
-            </div>
-          </motion.button>
-        </div>
-      </div>
-
-      {/* Window Content */}
-      <div className="h-full bg-window-bg text-text-primary overflow-hidden" style={{ height: 'calc(100% - 48px)' }}>
+      <div className="window-content">
         <AppContent window={windowData} />
       </div>
 
-      {/* Resize Handle */}
       {!windowData.maximized && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.5 }}
-          whileHover={{ opacity: 1 }}
-          className="absolute bottom-0 right-0 w-4 h-4 cursor-nw-resize transition-opacity"
-          onMouseDown={handleResizeMouseDown}
+        <button
+          type="button"
+          className="window-resize-handle"
+          aria-label={'Resize ' + windowData.title + ' window'}
+          title="Drag to resize; use arrow keys to adjust"
+          onPointerDown={handleResizePointerDown}
+          onKeyDown={handleResizeKey}
         >
-          <div className="absolute bottom-1 right-1 w-2 h-2 border-r-2 border-b-2 border-accent" />
-        </motion.div>
+          <span aria-hidden="true" />
+        </button>
       )}
     </motion.div>
   );

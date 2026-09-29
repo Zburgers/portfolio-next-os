@@ -70,8 +70,8 @@ export default function Desktop() {
       const height = window.innerHeight;
       
       // Calculate available space for desktop icons
-      const availableHeight = height - TOP_BAR_HEIGHT - DOCK_HEIGHT - (DESKTOP_PADDING * 2) - ICON_CONTAINER_TOP_PADDING;
-      const availableWidth = Math.min(width - (DESKTOP_PADDING * 2), 400); // Max width constraint
+      const availableHeight = Math.max(0, height - TOP_BAR_HEIGHT - DOCK_HEIGHT - (DESKTOP_PADDING * 2) - ICON_CONTAINER_TOP_PADDING);
+      const availableWidth = Math.max(0, Math.min(width - (DESKTOP_PADDING * 2), 400));
       
       // Calculate how many icons can fit
       const gridCols = Math.floor((availableWidth + ICON_GAP) / (ICON_SIZE + ICON_GAP));
@@ -93,13 +93,8 @@ export default function Desktop() {
 
   // Calculate auto-positioning for apps that fit within screen bounds
   const positionedApps = useMemo(() => {
-    const maxIconsOnScreen = screenDimensions.gridCols * screenDimensions.gridRows;
-    
-    // Sort by priority first, then slice to fit screen
     const sortedApps = [...desktopApps].sort((a, b) => (a.priority || 999) - (b.priority || 999));
-    const visibleApps = sortedApps.slice(0, maxIconsOnScreen);
-    
-    return visibleApps.map((app, index) => {
+    return sortedApps.map((app, index) => {
       // Calculate grid position automatically (left to right, top to bottom)
       const col = (index % screenDimensions.gridCols) + 1;
       const row = Math.floor(index / screenDimensions.gridCols) + 1;
@@ -172,9 +167,10 @@ export default function Desktop() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_42%_88%,rgba(39,102,228,0.12),transparent_60%)]" />
       </div>
 
-      {/* Screen-Aware Desktop Icons Grid */}
+      {/* Screen-aware, scrollable desktop icons grid */}
       <div 
         className="desktop-icons-container-responsive"
+        aria-label="Desktop applications"
         style={{
           top: `${TOP_BAR_HEIGHT + DESKTOP_PADDING}px`,
           left: `${DESKTOP_PADDING}px`,
@@ -203,17 +199,6 @@ export default function Desktop() {
           </div>
         ))}
       </div>
-
-      {/* Debug Info - only in development, hidden by default */}
-      {false && process.env.NODE_ENV === 'development' && (
-        <div className="fixed top-20 right-4 bg-black/80 text-white p-2 rounded text-xs z-[100]">
-          <div>Screen: {screenDimensions.width}×{screenDimensions.height}</div>
-          <div>Available Height: {screenDimensions.availableHeight}px</div>
-          <div>Grid: {screenDimensions.gridCols}×{screenDimensions.gridRows}</div>
-          <div>Max Icons: {screenDimensions.gridCols * screenDimensions.gridRows}</div>
-          <div>Showing: {positionedApps.length}/{desktopApps.length}</div>
-        </div>
-      )}
 
       <TopBar />
       <Dock />

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer, ReactNode } from 'react';
 
 export interface Window {
   id: number;
@@ -26,9 +26,6 @@ interface DesktopState {
   showCalendar: boolean;
   showControlCenter: boolean;
   showActivities: boolean;
-  wifiEnabled: boolean;
-  bluetoothEnabled: boolean;
-  airplaneMode: boolean;
 }
 
 type DesktopAction = 
@@ -40,10 +37,7 @@ type DesktopAction =
   | { type: 'TOGGLE_CALENDAR' }
   | { type: 'TOGGLE_CONTROL_CENTER' }
   | { type: 'TOGGLE_ACTIVITIES' }
-  | { type: 'CLOSE_PANELS' }
-  | { type: 'SET_WIFI'; enabled: boolean }
-  | { type: 'SET_BLUETOOTH'; enabled: boolean }
-  | { type: 'SET_AIRPLANE_MODE'; enabled: boolean };
+  | { type: 'CLOSE_PANELS' };
 
 interface DesktopContextType extends DesktopState {
   openWindow: (appType: string, title: string, payload?: any) => void;
@@ -55,9 +49,6 @@ interface DesktopContextType extends DesktopState {
   toggleControlCenter: () => void;
   toggleActivities: () => void;
   closePanels: () => void;
-  setWifiEnabled: (enabled: boolean) => void;
-  setBluetoothEnabled: (enabled: boolean) => void;
-  setAirplaneMode: (enabled: boolean) => void;
 }
 
 const DesktopContext = createContext<DesktopContextType | undefined>(undefined);
@@ -81,10 +72,11 @@ const initialState: DesktopState = {
   showCalendar: false,
   showControlCenter: false,
   showActivities: false,
-  wifiEnabled: true,
-  bluetoothEnabled: true,
-  airplaneMode: false,
 };
+
+const topmostWindowId = (windows: Window[]) => windows
+  .filter((window) => !window.minimized)
+  .reduce<Window | null>((top, window) => !top || window.zIndex > top.zIndex ? window : top, null)?.id ?? null;
 
 function desktopReducer(state: DesktopState, action: DesktopAction): DesktopState {
   switch (action.type) {
@@ -110,8 +102,8 @@ function desktopReducer(state: DesktopState, action: DesktopAction): DesktopStat
 
       const topBarHeight = 44;
       const dockSpace = action.appType === 'welcome' ? 24 : 96;
-      const width = Math.min(920, Math.max(320, action.viewportWidth - 32));
-      const height = Math.min(620, Math.max(320, action.viewportHeight - topBarHeight - dockSpace));
+      const width = Math.max(0, Math.min(920, action.viewportWidth - 32));
+      const height = Math.max(0, Math.min(620, action.viewportHeight - topBarHeight - dockSpace));
       const cascade = ((state.nextId - 1) % 6) * 22;
       const maxX = Math.max(16, action.viewportWidth - width - 16);
       const maxY = Math.max(topBarHeight + 8, action.viewportHeight - height - dockSpace);
@@ -145,8 +137,8 @@ function desktopReducer(state: DesktopState, action: DesktopAction): DesktopStat
       return {
         ...state,
         windows: filteredWindows,
-        activeWindowId: state.activeWindowId === action.id 
-          ? (filteredWindows.length > 0 ? filteredWindows[filteredWindows.length - 1].id : null)
+        activeWindowId: state.activeWindowId === action.id
+          ? topmostWindowId(filteredWindows)
           : state.activeWindowId,
       };
     }
@@ -155,8 +147,8 @@ function desktopReducer(state: DesktopState, action: DesktopAction): DesktopStat
       const maxZ = state.windows.reduce((max, w) => Math.max(max, w.zIndex), 0);
       return {
         ...state,
-        windows: state.windows.map(w => 
-          w.id === action.id ? { ...w, zIndex: maxZ + 1 } : w
+        windows: state.windows.map(w =>
+          w.id === action.id ? { ...w, minimized: false, zIndex: maxZ + 1 } : w
         ),
         activeWindowId: action.id,
         showCalendar: false,
@@ -166,11 +158,18 @@ function desktopReducer(state: DesktopState, action: DesktopAction): DesktopStat
     }
 
     case 'UPDATE_WINDOW': {
+      const maxZ = state.windows.reduce((max, window) => Math.max(max, window.zIndex), 0);
+      const windows = state.windows.map((window) => window.id === action.id
+        ? { ...window, ...action.updates, ...(action.updates.minimized === false ? { zIndex: maxZ + 1 } : {}) }
+        : window
+      );
+      const activeWindowId = action.updates.minimized === true && state.activeWindowId === action.id
+        ? topmostWindowId(windows)
+        : action.updates.minimized === false ? action.id : state.activeWindowId;
       return {
         ...state,
-        windows: state.windows.map(w => 
-          w.id === action.id ? { ...w, ...action.updates } : w
-        ),
+        windows,
+        activeWindowId,
       };
     }
 
@@ -217,32 +216,6 @@ function desktopReducer(state: DesktopState, action: DesktopAction): DesktopStat
       };
     }
 
-    case 'SET_WIFI': {
-      return {
-        ...state,
-        wifiEnabled: action.enabled,
-        airplaneMode: action.enabled ? false : state.airplaneMode,
-      };
-    }
-
-    case 'SET_BLUETOOTH': {
-      return {
-        ...state,
-        bluetoothEnabled: action.enabled,
-        airplaneMode: action.enabled ? false : state.airplaneMode,
-      };
-    }
-
-    case 'SET_AIRPLANE_MODE': {
-      const enabled = action.enabled;
-      return {
-        ...state,
-        airplaneMode: enabled,
-        wifiEnabled: enabled ? false : state.wifiEnabled,
-        bluetoothEnabled: enabled ? false : state.bluetoothEnabled,
-      };
-    }
-
     default:
       return state;
   }
@@ -251,7 +224,7 @@ function desktopReducer(state: DesktopState, action: DesktopAction): DesktopStat
 export function DesktopProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(desktopReducer, initialState);
 
-  const openWindow = (appType: string, title: string, payload?: any) => {
+  const openWindow = useCallback((appType: string, title: string, payload?: any) => {
     dispatch({
       type: 'OPEN_WINDOW',
       appType,
@@ -260,21 +233,21 @@ export function DesktopProvider({ children }: { children: ReactNode }) {
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
     });
-  };
+  }, []);
 
-  const closeWindow = (id: number) => {
+  const closeWindow = useCallback((id: number) => {
     dispatch({ type: 'CLOSE_WINDOW', id });
-  };
+  }, []);
 
-  const focusWindow = (id: number) => {
+  const focusWindow = useCallback((id: number) => {
     dispatch({ type: 'FOCUS_WINDOW', id });
-  };
+  }, []);
 
-  const updateWindow = (id: number, updates: Partial<Window>) => {
+  const updateWindow = useCallback((id: number, updates: Partial<Window>) => {
     dispatch({ type: 'UPDATE_WINDOW', id, updates });
-  };
+  }, []);
 
-  const setTheme = (theme: Theme) => {
+  const setTheme = useCallback((theme: Theme) => {
     dispatch({ type: 'SET_THEME', theme });
     try {
       localStorage.setItem('desktop-theme', theme);
@@ -284,41 +257,29 @@ export function DesktopProvider({ children }: { children: ReactNode }) {
     const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     if (dark) document.documentElement.setAttribute('data-theme', 'dark');
     else document.documentElement.removeAttribute('data-theme');
-  };
+  }, []);
 
-  const toggleCalendar = () => {
+  const toggleCalendar = useCallback(() => {
     dispatch({ type: 'TOGGLE_CALENDAR' });
-  };
+  }, []);
 
-  const toggleControlCenter = () => {
+  const toggleControlCenter = useCallback(() => {
     dispatch({ type: 'TOGGLE_CONTROL_CENTER' });
-  };
+  }, []);
 
-  const toggleActivities = () => {
+  const toggleActivities = useCallback(() => {
     dispatch({ type: 'TOGGLE_ACTIVITIES' });
-  };
+  }, []);
 
-  const closePanels = () => {
+  const closePanels = useCallback(() => {
     dispatch({ type: 'CLOSE_PANELS' });
-  };
-
-  const setWifiEnabled = (enabled: boolean) => {
-    dispatch({ type: 'SET_WIFI', enabled });
-  };
-
-  const setBluetoothEnabled = (enabled: boolean) => {
-    dispatch({ type: 'SET_BLUETOOTH', enabled });
-  };
-
-  const setAirplaneMode = (enabled: boolean) => {
-    dispatch({ type: 'SET_AIRPLANE_MODE', enabled });
-  };
+  }, []);
 
   // Initialize theme on mount
   useEffect(() => {
     const initialTheme = getInitialTheme();
     setTheme(initialTheme);
-  }, []);
+  }, [setTheme]);
 
   useEffect(() => {
     if (state.theme !== 'system') return;
@@ -332,7 +293,7 @@ export function DesktopProvider({ children }: { children: ReactNode }) {
     return () => preference.removeEventListener('change', applyPreference);
   }, [state.theme]);
 
-  const contextValue: DesktopContextType = {
+  const contextValue = useMemo<DesktopContextType>(() => ({
     ...state,
     openWindow,
     closeWindow,
@@ -343,10 +304,7 @@ export function DesktopProvider({ children }: { children: ReactNode }) {
     toggleControlCenter,
     toggleActivities,
     closePanels,
-    setWifiEnabled,
-    setBluetoothEnabled,
-    setAirplaneMode,
-  };
+  }), [state, openWindow, closeWindow, focusWindow, updateWindow, setTheme, toggleCalendar, toggleControlCenter, toggleActivities, closePanels]);
 
   return (
     <DesktopContext.Provider value={contextValue}>

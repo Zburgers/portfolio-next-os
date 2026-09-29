@@ -37,6 +37,7 @@ export default function Terminal() {
     navigateHistory,
     getCompletions,
     addLine,
+    clearTerminal,
   } = useTerminal({ onOpen: handleOpen });
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -69,16 +70,20 @@ export default function Terminal() {
       navigateHistory('down');
     } else if (e.key === 'Tab') {
       e.preventDefault();
-      // Tab completion
-      if (currentInput) {
-        const matching = getCompletions(currentInput);
-        if (matching.length === 1) {
-          setCurrentInput(matching[0]);
-        } else if (matching.length > 1) {
-          addLine('input', `${username}@${hostname}:${currentDirectory}$ ${currentInput}`);
-          addLine('output', matching.join('  '));
-        }
-      }
+      const matching = getCompletions(currentInput);
+      if (matching.length === 1) setCurrentInput(matching[0]);
+      else if (matching.length > 1) addLine('output', matching.join('  '));
+    } else if (e.key === 'Escape') {
+      setCurrentInput('');
+      setHistoryIndex(-1);
+    } else if (e.ctrlKey && e.key.toLowerCase() === 'l') {
+      e.preventDefault();
+      clearTerminal();
+    } else if (e.ctrlKey && e.key.toLowerCase() === 'c') {
+      e.preventDefault();
+      if (currentInput) addLine('input', `${username}@${hostname}:${currentDirectory}$ ${currentInput}^C`);
+      setCurrentInput('');
+      setHistoryIndex(-1);
     }
   };
 
@@ -89,7 +94,9 @@ export default function Terminal() {
         className="flex-1 overflow-y-auto p-4 space-y-0.5"
         onClick={() => inputRef.current?.focus()}
       >
-        <TerminalOutput lines={lines} autoScroll={false} />
+        <div role="log" aria-live="polite" aria-label="Terminal output">
+          <TerminalOutput lines={lines} autoScroll={false} />
+        </div>
         
         {/* Current input line */}
         <div className="flex items-center">
@@ -99,7 +106,7 @@ export default function Terminal() {
           <span className="text-[#c0caf5]">:</span>
           <span className="text-[#7dcfff]">{currentDirectory}</span>
           <span className="text-[#c0caf5]">$ </span>
-          <form onSubmit={(e) => { e.preventDefault(); handleSubmit(currentInput); }} className="flex-1">
+          <form onSubmit={(e) => { e.preventDefault(); if (!isTyping) handleSubmit(currentInput); }} className="flex-1">
             <input
               ref={inputRef}
               type="text"
@@ -110,6 +117,8 @@ export default function Terminal() {
               autoComplete="off"
               spellCheck={false}
               autoCapitalize="off"
+              aria-label="Enter a simulated profile shell command"
+              title="Browser-only profile shell. Host commands are unavailable."
               disabled={isTyping}
             />
           </form>

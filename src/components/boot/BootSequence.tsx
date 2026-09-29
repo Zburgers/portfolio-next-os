@@ -13,6 +13,7 @@ interface BootSequenceProps {
 
 export default function BootSequence({ children }: BootSequenceProps) {
   const { phase, deviceType } = useSystemBoot();
+  const isBooting = phase === 'GRUB' || phase === 'KERNEL_BOOT';
 
   // If mobile, show mobile portfolio
   if (deviceType === 'mobile') {
@@ -21,27 +22,14 @@ export default function BootSequence({ children }: BootSequenceProps) {
 
   return (
     <AnimatePresence mode="wait">
-      {phase === 'GRUB' && (
+      {isBooting && (
         <motion.div
-          key="grub"
+          key="boot"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <GrubBootloader />
-        </motion.div>
-      )}
-
-      {phase === 'KERNEL_BOOT' && (
-        <motion.div
-          key="kernel"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          {/* Kernel boot is handled within GrubBootloader */}
           <GrubBootloader />
         </motion.div>
       )}
