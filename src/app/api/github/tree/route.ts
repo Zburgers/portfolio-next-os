@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const githubUrl = searchParams.get('url');
-    const branch = searchParams.get('branch') || 'main';
+    const branch = searchParams.get('branch') || undefined;
 
     if (!githubUrl) {
       return NextResponse.json(
@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching repo tree:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch repository tree' },
-      { status: 500 }
+      { error: error instanceof Error ? error.message : 'Failed to fetch repository tree' },
+      { status: 502 }
     );
   }
 }

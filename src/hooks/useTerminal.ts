@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { projects } from '@/lib/projects';
+import { profile } from '@/lib/profile';
 
 // Terminal line types
 export interface TerminalLine {
@@ -17,8 +18,30 @@ export type TerminalStatus = 'idle' | 'processing' | 'error' | 'success' | 'pani
 export const AVAILABLE_COMMANDS = [
   'help', 'clear', 'echo', 'whoami', 'date', 'neofetch', 'projects',
   'cat', 'ls', 'pwd', 'cd', 'uname', 'uptime', 'hostname', 'history',
-  'man', 'sudo', 'exit', 'reboot', 'shutdown', 'dnf', 'open'
+  'sudo', 'open'
 ];
+
+const projectDirectories = projects.map((project) => project.name.toLowerCase().replace(/\s+/g, '-'));
+
+function resolveDirectory(input: string | undefined, currentDirectory: string): string | undefined {
+  if (!input || input === '~') return '~';
+  const current = currentDirectory === '~' ? [] : currentDirectory.replace(/^~\/?/, '').split('/').filter(Boolean);
+  const requested = input.startsWith('~/')
+    ? input.slice(2).split('/')
+    : input.startsWith('/')
+      ? input.replace(/^\/home\/nakshatra\/?/, '').split('/')
+      : [...current, ...input.split('/')];
+  const parts: string[] = [];
+  for (const part of requested) {
+    if (!part || part === '.') continue;
+    if (part === '..') parts.pop();
+    else parts.push(part);
+  }
+  const path = parts.length ? `~/${parts.join('/')}` : '~';
+  const baseDirectories = ['~', '~/profile', '~/projects', '~/profile/projects'];
+  const projectPaths = projectDirectories.flatMap((name) => [`~/projects/${name}`, `~/profile/projects/${name}`]);
+  return [...baseDirectories, ...projectPaths].includes(path) ? path : undefined;
+}
 
 // Terminal configuration
 export interface TerminalConfig {
@@ -27,12 +50,13 @@ export interface TerminalConfig {
   initialDirectory?: string;
   welcomeLines?: TerminalLine[];
   readOnly?: boolean;
+  onOpen?: (item: string) => void;
 }
 
 // Default welcome lines
 const DEFAULT_WELCOME_LINES: TerminalLine[] = [
-  { type: 'output', content: 'Fedora Linux 42 (Workstation Edition)', timestamp: new Date() },
-  { type: 'output', content: 'Kernel: Linux 6.5.6-300.fc39.x86_64', timestamp: new Date() },
+  { type: 'output', content: 'Project Next OS shell · simulated', timestamp: new Date() },
+  { type: 'output', content: 'Commands run in this page and do not access your computer.', timestamp: new Date() },
   { type: 'output', content: '', timestamp: new Date() },
   { type: 'success', content: 'Type "help" to see available commands.', timestamp: new Date() },
 ];
@@ -79,6 +103,7 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
     initialDirectory = '~',
     welcomeLines = DEFAULT_WELCOME_LINES,
     readOnly = false,
+    onOpen,
   } = config;
 
   const [lines, setLines] = useState<TerminalLine[]>(welcomeLines);
@@ -129,18 +154,7 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
 
     setStatus('processing');
 
-    // Handle sudo prefix
-    let actualCommand = trimmedCommand;
-    let isSudo = false;
-    if (trimmedCommand.startsWith('sudo ')) {
-      isSudo = true;
-      actualCommand = trimmedCommand.slice(5).trim();
-      if (!actualCommand) {
-        addLine('error', 'usage: sudo command');
-        setStatus('error');
-        return;
-      }
-    }
+    const actualCommand = trimmedCommand;
 
     const [cmd, ...args] = actualCommand.split(' ');
     let commandStatus: TerminalStatus = 'success';
@@ -173,15 +187,13 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
           '  uname [-a]        Show system information',
           '  neofetch          Display system info with ASCII art',
           '  history           Show command history',
-          '  man <cmd>         Show manual for command',
           '',
           '  projects          List all portfolio projects',
-          '  cat readme <name> Show project README',
+          '  cat <file>        Read about.md, experience.md, links.md',
+          '  cat readme <name> Show a project summary',
           '  open <item>       Open resume, projects, or contact',
           '',
-          '  dnf search <pkg>  Search for packages',
-          '  sudo <cmd>        Run command as superuser',
-          '  exit              Close terminal session',
+          '  sudo <cmd>        Host privileges are unavailable here',
         ]);
         addLine('output', '');
         break;
@@ -206,49 +218,29 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
         addLine('output', currentDirectory === '~' ? `/home/${username}` : currentDirectory);
         break;
 
-      case 'cd':
-        if (!args[0] || args[0] === '~') {
-          setCurrentDirectory('~');
-        } else if (args[0] === '..') {
-          if (currentDirectory !== '~' && currentDirectory !== '/') {
-            const parts = currentDirectory.split('/');
-            parts.pop();
-            setCurrentDirectory(parts.join('/') || '/');
-          }
-        } else if (args[0] === '/') {
-          setCurrentDirectory('/');
-        } else if (args[0].startsWith('/')) {
-          setCurrentDirectory(args[0]);
-        } else if (args[0] === 'Trash' || args[0] === './Trash') {
-          const newDir = currentDirectory === '~'
-            ? `~/Trash`
-            : `${currentDirectory}/Trash`;
-          setCurrentDirectory(newDir);
-        } else {
-          const newDir = currentDirectory === '~'
-            ? `~/${args[0]}`
-            : `${currentDirectory}/${args[0]}`;
-          setCurrentDirectory(newDir);
+      case 'cd': {
+        const directory = resolveDirectory(args[0], currentDirectory);
+        if (directory) setCurrentDirectory(directory);
+        else {
+          addLine('error', `cd: ${args[0]}: no such directory in this profile`);
+          commandStatus = 'error';
         }
         break;
+      }
 
       case 'ls':
-        if (currentDirectory === '~' || currentDirectory === `/home/${username}`) {
+        if (currentDirectory === '~' || currentDirectory === `/home/${username}` || currentDirectory === '~/profile') {
           addLines('output', [
-            'Desktop    Documents  Downloads  Music',
-            'Pictures   Projects   Public     Templates',
-            'Videos     .config    .local     .bashrc',
-            'Trash'
+            'about.md  experience.md  links.md  resume.pdf',
+            'projects/'
           ]);
-        } else if (currentDirectory === '/home/nakshatra/Trash' || currentDirectory === '~/Trash') {
-          addLine('output', 'Windows11.iso');
-        } else if (currentDirectory.includes('Projects')) {
-          projects.forEach(p => {
-            addLine('output', `📁 ${p.name.replace(/\s+/g, '-').toLowerCase()}/`);
-          });
+        } else if (currentDirectory.endsWith('/projects')) {
+          addLines('output', projects.map((project) => `${project.name.replace(/\s+/g, '-').toLowerCase()}/`));
+        } else if (projectDirectories.some((name) => currentDirectory.endsWith(`/projects/${name}`))) {
+          addLine('output', 'README.md');
         } else {
-          addLine('output', '.');
-          addLine('output', '..');
+          addLine('error', `ls: ${currentDirectory}: no such directory`);
+          commandStatus = 'error';
         }
         break;
 
@@ -257,21 +249,11 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
         break;
 
       case 'uptime':
-        const hours = Math.floor(Math.random() * 24) + 1;
-        const mins = Math.floor(Math.random() * 60);
-        addLine('output', ` ${new Date().toLocaleTimeString()}  up ${hours}:${mins.toString().padStart(2, '0')},  1 user,  load average: 0.42, 0.38, 0.35`);
+        addLine('output', `Browser session started at ${new Date(performance.timeOrigin).toLocaleTimeString()}`);
         break;
 
       case 'uname':
-        if (args.includes('-a')) {
-          addLine('output', 'Linux fedora 6.12.0-300.fc42.x86_64 #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux');
-        } else if (args.includes('-r')) {
-          addLine('output', '6.5.6-300.fc39.x86_64');
-        } else if (args.includes('-s')) {
-          addLine('output', 'Linux');
-        } else {
-          addLine('output', 'Linux');
-        }
+        addLine('output', args.includes('-a') ? 'Project Next OS · browser simulation' : 'Project Next OS');
         break;
 
       case 'history':
@@ -284,96 +266,19 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
         }
         break;
 
-      case 'man':
-        if (!args[0]) {
-          addLine('error', 'What manual page do you want?');
-          addLine('output', 'For example, try \'man ls\'');
-          commandStatus = 'error';
-        } else {
-          addLine('output', '');
-          addLine('success', `${args[0].toUpperCase()}(1)           User Commands           ${args[0].toUpperCase()}(1)`);
-          addLine('output', '');
-          addLine('output', 'NAME');
-          addLine('output', `       ${args[0]} - ${args[0] === 'ls' ? 'list directory contents' : args[0] === 'cd' ? 'change directory' : 'portfolio command'}`);
-          addLine('output', '');
-          addLine('output', 'DESCRIPTION');
-          addLine('output', `       This is a simulated man page for the ${args[0]} command.`);
-          addLine('output', '       For the full experience, visit the desktop on a larger screen.');
-          addLine('output', '');
-        }
-        break;
-
-      case 'dnf':
-        if (isSudo && args[0] === 'install') {
-          addLine('output', `Last metadata expiration check: 0:42:15 ago.`);
-          addLine('output', `Package ${args[1] || 'package'} is already installed.`);
-          addLine('output', 'Dependencies resolved.');
-          addLine('output', 'Nothing to do.');
-          addLine('success', 'Complete!');
-        } else if (args[0] === 'search' && args[1]) {
-          addLine('output', `Last metadata expiration check: 0:42:15 ago.`);
-          addLine('output', `======================== Name Matched: ${args[1]} =========================`);
-          addLine('output', `${args[1]}.x86_64 : The ${args[1]} package for Fedora`);
-          addLine('output', `${args[1]}-devel.x86_64 : Development files for ${args[1]}`);
-        } else if (args[0] === 'update' || args[0] === 'upgrade') {
-          if (!isSudo) {
-            addLine('error', 'This command has to be run with superuser privileges (under the root user on most systems).');
-            commandStatus = 'error';
-          } else {
-            addLine('output', 'Last metadata expiration check: 0:42:15 ago.');
-            addLine('output', 'Dependencies resolved.');
-            addLine('output', 'Nothing to do.');
-            addLine('success', 'Complete!');
-          }
-        } else {
-          addLine('output', 'usage: dnf [options] COMMAND');
-          addLine('output', '');
-          addLine('output', 'Commands: search, install, update, upgrade, info');
-        }
+      case 'sudo':
+        addLine('error', 'sudo: this profile shell has no host privileges');
+        commandStatus = 'error';
         break;
 
       case 'neofetch':
         addLines('output', [
-          '             .',
-          '           .',
-          '          .',
-          '         .',
-          '        .',
-          '       .',
-          '      .',
-          '     .',
-          '       .',
-          '         .',
-          '           .',
-          '             .',
-          '           .',
-          '         .',
-          '       .',
-          '      .',
-          '     .',
-          '      .',
-          '        .',
-          '          .',
-          '            .',
-          '',
-          `\x1b[36m${username}@${hostname}\x1b[0m`,
-          '-'.repeat(username.length + hostname.length + 1),
-          `\x1b[36mOS:\x1b[0m Fedora Linux 39 (Workstation Edition) x86_64`,
-          `\x1b[36mHost:\x1b[0m ASUS ROG Strix`,
-          `\x1b[36mKernel:\x1b[0m 6.5.6-300.fc39.x86_64`,
-          `\x1b[36mUptime:\x1b[0m 2 hours, 34 mins`,
-          `\x1b[36mPackages:\x1b[0m 2847 (rpm), 42 (flatpak)`,
-          `\x1b[36mShell:\x1b[0m zsh 5.9`,
-          `\x1b[36mResolution:\x1b[0m 1920x1080, 2560x1440`,
-          `\x1b[36mDE:\x1b[0m GNOME 45.1`,
-          `\x1b[36mWM:\x1b[0m Mutter`,
-          `\x1b[36mTheme:\x1b[0m Adwaita-dark [GTK3]`,
-          `\x1b[36mIcons:\x1b[0m Adwaita [GTK3]`,
-          `\x1b[36mTerminal:\x1b[0m Portfolio Terminal`,
-          `\x1b[36mCPU:\x1b[0m Intel i7-12700H (20) @ 4.70GHz`,
-          `\x1b[36mGPU:\x1b[0m Intel Alder Lake-P GT2 [Iris Xe]`,
-          `\x1b[36mGPU:\x1b[0m NVIDIA GeForce RTX 3060 Mobile`,
-          `\x1b[36mMemory:\x1b[0m 7482MiB / 32768MiB`,
+          `\x1b[36m${profile.name}\x1b[0m`,
+          '-'.repeat(profile.name.length),
+          `\x1b[36mRole:\x1b[0m ${profile.title}`,
+          `\x1b[36mLocation:\x1b[0m ${profile.location}`,
+          `\x1b[36mFocus:\x1b[0m ${profile.focus.join(', ')}`,
+          `\x1b[36mShell:\x1b[0m portfolio simulation`,
           '',
         ]);
         break;
@@ -387,38 +292,50 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
           addLine('output', `${index + 1}. \x1b[1m${project.name}\x1b[0m`);
           addLine('output', `   ${project.description}`);
           addLine('output', `   \x1b[36mTech:\x1b[0m ${project.techStack.slice(0, 4).join(', ')}`);
-          addLine('output', `   \x1b[33mGitHub:\x1b[0m ${project.githubUrl}`);
+          if (project.githubUrl) addLine('output', `   \x1b[33mGitHub:\x1b[0m ${project.githubUrl}`);
         });
         addLine('output', '');
         addLine('output', '━'.repeat(50));
-        addLine('output', 'Use "cat readme <project-name>" to view project details.');
+        addLine('output', 'Use "cat readme <project-name>" to view a project summary.');
         break;
 
       case 'open':
         if (!args[0]) {
           addLine('output', 'Usage: open <item>');
-          addLine('output', 'Items: resume, projects, contact, github');
+          addLine('output', 'Items: resume, work, contact, github, linkedin, x');
         } else {
           const item = args[0].toLowerCase();
           switch (item) {
             case 'resume':
             case 'resume.pdf':
+              onOpen?.('resume');
               addLine('success', '📄 Opening resume...');
-              // This will be handled by the component using the hook
               break;
             case 'projects':
+            case 'work':
+              onOpen?.('projects');
               addLine('success', '📂 Opening portfolio projects...');
               break;
             case 'contact':
             case 'email':
+              onOpen?.('contact');
               addLine('success', '📧 Opening email client...');
               break;
             case 'github':
+              onOpen?.('github');
               addLine('success', '🐙 Opening GitHub profile...');
+              break;
+            case 'linkedin':
+              onOpen?.('linkedin');
+              addLine('success', 'Opening LinkedIn profile...');
+              break;
+            case 'x':
+              onOpen?.('x');
+              addLine('success', 'Opening X profile...');
               break;
             default:
               addLine('error', `open: ${item}: not a recognized item`);
-              addLine('output', 'Try: resume, projects, contact, github');
+              addLine('output', 'Try: resume, projects, contact, github, linkedin, x');
               commandStatus = 'error';
           }
         }
@@ -457,43 +374,34 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
             addLine('output', 'Use "projects" to list available projects.');
             commandStatus = 'error';
           }
-        } else if (args[0] && currentDirectory.includes('Trash') && args[0] === 'Windows11.iso') {
-          // Special handling for Windows ISO in Trash
+        } else if (['about.md', 'profile.md'].includes(args[0]?.toLowerCase() ?? '')) {
           addLine('output', '');
-          addLine('success', '💾 Windows11.iso (Disk Image)');
-          addLine('output', '═'.repeat(50));
+          addLine('success', `# ${profile.name}`);
+          addLine('output', profile.title);
+          addLine('output', `${profile.location} · ${profile.education.institution}`);
           addLine('output', '');
-          addLine('output', 'Windows 11 Installation Disk Image');
-          addLine('output', 'Size: 5.4 GB');
-          addLine('output', 'Status: Trashed');
-          addLine('output', 'Location: /home/nakshatra/Trash');
+          addLine('output', profile.summary);
+          addLine('output', `Focus: ${profile.focus.join(' · ')}`);
+        } else if (args[0]?.toLowerCase() === 'experience.md') {
           addLine('output', '');
-          addLine('output', 'Note: This is a Windows installation file that was moved to trash.');
-          addLine('output', 'To restore, navigate to the Files app and use the trash functionality.');
-          addLine('output', '');
-          addLine('output', '═'.repeat(50));
+          profile.experience.forEach((role) => {
+            addLine('success', `${role.role} · ${role.period}`);
+            addLine('output', `${role.organization} — ${role.type}`);
+            addLine('output', role.summary);
+            addLine('output', '');
+          });
+        } else if (args[0]?.toLowerCase() === 'links.md') {
+          addLines('output', [
+            `GitHub   ${profile.githubUrl}`,
+            `LinkedIn ${profile.linkedinUrl}`,
+            `Email    ${profile.email}`,
+            `Resume   ${profile.resumeUrl}`,
+          ]);
         } else if (args[0]) {
           addLine('error', `cat: ${args[0]}: No such file or directory`);
           commandStatus = 'error';
         } else {
           addLine('output', 'Usage: cat readme <project-name>');
-        }
-        break;
-
-      case 'exit':
-        addLine('output', 'logout');
-        addLine('output', '');
-        addLine('success', 'Session closed. Thank you for visiting!');
-        break;
-
-      case 'reboot':
-      case 'shutdown':
-        if (!isSudo) {
-          addLine('error', `${cmd}: Permission denied. Try using 'sudo ${cmd}'`);
-          commandStatus = 'error';
-        } else {
-          addLine('output', `System ${cmd === 'reboot' ? 'reboot' : 'shutdown'} initiated...`);
-          addLine('success', '(This is a simulated terminal - system remains operational)');
         }
         break;
 
@@ -519,7 +427,7 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
       // Reset to idle after showing status
       setTimeout(() => setStatus('idle'), 1500);
     }, 100);
-  }, [username, hostname, currentDirectory, commandHistory, addLine, addLines, clearTerminal]);
+  }, [username, hostname, currentDirectory, commandHistory, addLine, addLines, clearTerminal, onOpen]);
 
   // Simulate typing effect for the Welcome widget macros
   const simulateTyping = useCallback((command: string, onComplete?: () => void) => {

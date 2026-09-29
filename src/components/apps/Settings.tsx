@@ -1,12 +1,9 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Palette,
   Wifi,
-  Volume2,
-  Monitor,
-  Shield,
   Info,
   Sun,
   Moon,
@@ -14,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useDesktop } from '@/context/DesktopContext';
 
-type SettingsSectionId = 'appearance' | 'network' | 'sound' | 'display' | 'privacy' | 'about';
+type SettingsSectionId = 'appearance' | 'network' | 'about';
 
 interface SettingsSection {
   id: SettingsSectionId;
@@ -25,9 +22,6 @@ interface SettingsSection {
 const settingsSections: SettingsSection[] = [
   { id: 'appearance', name: 'Appearance', icon: Palette },
   { id: 'network', name: 'Network', icon: Wifi },
-  { id: 'sound', name: 'Sound', icon: Volume2 },
-  { id: 'display', name: 'Display', icon: Monitor },
-  { id: 'privacy', name: 'Privacy', icon: Shield },
   { id: 'about', name: 'About', icon: Info },
 ];
 
@@ -41,12 +35,6 @@ export default function Settings() {
     setWifiEnabled,
   } = useDesktop();
   const [activeSection, setActiveSection] = useState<SettingsSectionId>('appearance');
-  const [volumeLevel, setVolumeLevel] = useState(75);
-  const [brightness, setBrightness] = useState(80);
-
-  const sectionLabel = useMemo(() => {
-    return settingsSections.find((section) => section.id === activeSection)?.name ?? 'Settings';
-  }, [activeSection]);
 
   const renderSectionContent = () => {
     switch (activeSection) {
@@ -66,6 +54,7 @@ export default function Settings() {
                 <div className="grid grid-cols-3 gap-4">
                   <button
                     onClick={() => setTheme('light')}
+                    aria-pressed={theme === 'light'}
                     className={cx(
                       'p-4 rounded-lg border-2 transition-all duration-200',
                       theme === 'light'
@@ -81,6 +70,7 @@ export default function Settings() {
                   
                   <button
                     onClick={() => setTheme('dark')}
+                    aria-pressed={theme === 'dark'}
                     className={cx(
                       'p-4 rounded-lg border-2 transition-all duration-200',
                       theme === 'dark'
@@ -95,12 +85,19 @@ export default function Settings() {
                   </button>
                   
                   <button
-                    className="p-4 rounded-lg border-2 border-[color:var(--color-border)] hover:border-[color:var(--accent)]/50 transition-all duration-200"
+                    onClick={() => setTheme('system')}
+                    aria-pressed={theme === 'system'}
+                    className={cx(
+                      'p-4 rounded-lg border-2 transition-all duration-200',
+                      theme === 'system'
+                        ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]'
+                        : 'border-[color:var(--color-border)] hover:border-[color:var(--accent)]/50'
+                    )}
                   >
                     <div className="bg-gradient-to-br from-blue-400 to-purple-500 h-16 rounded mb-3 flex items-center justify-center">
                       <Paintbrush className="h-6 w-6 text-white" />
                     </div>
-                    <div className="text-sm font-medium text-center text-[color:var(--text-secondary)]">Auto</div>
+                    <div className="text-sm font-medium text-center text-[color:var(--text-primary)]">System</div>
                   </button>
                 </div>
               </div>
@@ -120,12 +117,16 @@ export default function Settings() {
                   <div>
                     <h3 className="text-lg font-medium text-[color:var(--text-primary)]">Wi-Fi</h3>
                     <p className="text-sm text-[color:var(--text-secondary)]">
-                      Manage wireless network connections
+                      Toggle the network indicator in this desktop preview.
                     </p>
                   </div>
                   
                   <button
                     onClick={() => setWifiEnabled(!wifiEnabled)}
+                    type="button"
+                    role="switch"
+                    aria-label="Preview Wi-Fi"
+                    aria-checked={wifiEnabled}
                     className={cx(
                       'relative inline-flex h-8 w-14 items-center rounded-full transition-colors duration-200',
                       wifiEnabled ? 'bg-[color:var(--accent)]' : 'bg-[color:var(--color-border)]'
@@ -140,109 +141,9 @@ export default function Settings() {
                   </button>
                 </div>
                 
-                {wifiEnabled && (
-                  <div className="mt-6 p-4 bg-[color:var(--accent-soft)] border border-[color:var(--accent)]/20 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-[color:var(--text-primary)]">YourNetwork</div>
-                        <div className="text-sm text-[color:var(--text-secondary)]">Connected</div>
-                      </div>
-                      <div className="text-sm text-[color:var(--accent)]">Connected</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'sound':
-        return (
-          <div className="space-y-8">
-            <div>
-              <h2 className="text-2xl font-semibold text-[color:var(--text-primary)] mb-6">Sound</h2>
-              
-              <div className="bg-[color:var(--color-surface)] border border-[color:var(--color-border)] rounded-xl p-6">
-                <h3 className="text-lg font-medium text-[color:var(--text-primary)] mb-6">Volume</h3>
-                
-                <div className="space-y-6">
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-medium text-[color:var(--text-primary)]">Master Volume</span>
-                      <span className="text-sm text-[color:var(--text-secondary)]">{volumeLevel}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={volumeLevel}
-                      onChange={(e) => setVolumeLevel(parseInt(e.target.value))}
-                      className="w-full h-2 bg-[color:var(--color-border)] rounded-lg appearance-none cursor-pointer"
-                      style={{
-                        background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${volumeLevel}%, var(--color-border) ${volumeLevel}%, var(--color-border) 100%)`
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'display':
-        return (
-          <div className="space-y-8">
-            <div>
-              <h2 className="text-2xl font-semibold text-[color:var(--text-primary)] mb-6">Display</h2>
-              
-              <div className="bg-[color:var(--color-surface)] border border-[color:var(--color-border)] rounded-xl p-6">
-                <h3 className="text-lg font-medium text-[color:var(--text-primary)] mb-6">Brightness</h3>
-                
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium text-[color:var(--text-primary)]">Screen Brightness</span>
-                    <span className="text-sm text-[color:var(--text-secondary)]">{brightness}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="10"
-                    max="100"
-                    value={brightness}
-                    onChange={(e) => setBrightness(parseInt(e.target.value))}
-                    className="w-full h-2 bg-[color:var(--color-border)] rounded-lg appearance-none cursor-pointer"
-                    style={{
-                      background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${(brightness - 10) / 0.9}%, var(--color-border) ${(brightness - 10) / 0.9}%, var(--color-border) 100%)`
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'privacy':
-        return (
-          <div className="space-y-8">
-            <div>
-              <h2 className="text-2xl font-semibold text-[color:var(--text-primary)] mb-6">Privacy</h2>
-              
-              <div className="bg-[color:var(--color-surface)] border border-[color:var(--color-border)] rounded-xl p-6">
-                <h3 className="text-lg font-medium text-[color:var(--text-primary)] mb-4">Location Services</h3>
-                <p className="text-sm text-[color:var(--text-secondary)] mb-6">
-                  Control which applications can access your location.
+                <p className="mt-4 rounded-lg border border-[color:var(--color-border)] p-4 text-sm text-[color:var(--text-secondary)]">
+                  Preview state: <strong className="text-[color:var(--text-primary)]">{wifiEnabled ? 'On' : 'Off'}</strong>. This does not change your device’s internet connection.
                 </p>
-                
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-[color:var(--color-surface-muted)] rounded-lg">
-                    <div>
-                      <div className="font-medium text-[color:var(--text-primary)]">Location Services</div>
-                      <div className="text-sm text-[color:var(--text-secondary)]">Allow apps to use your location</div>
-                    </div>
-                    <button className="relative inline-flex h-8 w-14 items-center rounded-full bg-[color:var(--color-border)] transition-colors duration-200">
-                      <span className="inline-block h-6 w-6 transform rounded-full bg-white translate-x-1 transition-transform duration-200" />
-                    </button>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -250,44 +151,16 @@ export default function Settings() {
 
       case 'about':
         return (
-          <div className="space-y-8">
+          <section className="space-y-5">
             <div>
-              <h2 className="text-2xl font-semibold text-[color:var(--text-primary)] mb-6">About</h2>
-              
-              <div className="bg-[color:var(--color-surface)] border border-[color:var(--color-border)] rounded-xl p-6">
-                <div className="flex items-center gap-6 mb-6">
-                  <div className="w-16 h-16 bg-[color:var(--accent)] rounded-full flex items-center justify-center">
-                    <span className="text-white text-2xl font-bold">F</span>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-[color:var(--text-primary)]">Fedora 42</h3>
-                    <p className="text-[color:var(--text-secondary)]">GNOME 47 Workstation</p>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-sm font-medium text-[color:var(--text-primary)]">Version</div>
-                      <div className="text-sm text-[color:var(--text-secondary)]">39.1.5</div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-[color:var(--text-primary)]">Kernel</div>
-                      <div className="text-sm text-[color:var(--text-secondary)]">6.5.6-300.fc39.x86_64</div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-[color:var(--text-primary)]">Memory</div>
-                      <div className="text-sm text-[color:var(--text-secondary)]">16.0 GB</div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-[color:var(--text-primary)]">Storage</div>
-                      <div className="text-sm text-[color:var(--text-secondary)]">512 GB SSD</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <h2 className="text-2xl font-semibold text-[color:var(--text-primary)] mb-2">About this preview</h2>
+              <p className="text-sm text-[color:var(--text-secondary)]">A portfolio presented inside a browser-based desktop interface.</p>
             </div>
-          </div>
+            <div className="rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-5">
+              <p className="font-semibold">Project Next OS</p>
+              <p className="mt-2 text-sm text-[color:var(--text-secondary)]">This is a visual simulation. Browser controls cannot read or change your computer’s hardware, network, or location settings.</p>
+            </div>
+          </section>
         );
 
       default:

@@ -21,7 +21,7 @@ export default function AppContent({ window }: AppContentProps) {
 
   switch (type) {
     case 'portfolio':
-      return <Portfolio />;
+      return <Portfolio initialTab={payload?.initialTab} />;
     
     case 'terminal':
       return <Terminal />;
@@ -41,7 +41,7 @@ export default function AppContent({ window }: AppContentProps) {
       return <Settings />;
     
     case 'text-editor':
-      return <TextEditor />;
+      return <TextEditor initialFileName={payload?.fileName} initialContent={payload?.content} />;
     
     case 'welcome':
       return <WelcomeBootstrapper />;

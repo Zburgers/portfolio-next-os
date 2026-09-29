@@ -1,4 +1,10 @@
-# Portfolio OS Audit Findings
+# Portfolio audit history
+
+> **Current status · September 29, 2026:** The detailed findings below are a historical browser audit from December 3, 2025; they do not describe the current revision. This refresh uses the August 2026 résumé, replaces the old welcome card with a Tux-backed profile terminal, adds real public-project screenshots, improves the mobile profile, and removes fake system and Trash behavior. The production build and live browser review are recorded in the pull request. See [the before/after comparison](./docs/portfolio-refresh-comparison.png) and [README](./README.md) for current behavior and simulation boundaries.
+
+---
+
+# Historical findings · December 3, 2025
 
 **Date:** December 3, 2025  
 **Auditor:** Interactive Playwright Browser Testing  

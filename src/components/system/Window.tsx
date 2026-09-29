@@ -110,11 +110,7 @@ export default function Window({ window: windowData }: WindowProps) {
     };
   }, [isDragging, isResizing, updateWindow]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget || (e.target as HTMLElement).closest('.titlebar')) {
-      focusWindow(windowData.id);
-    }
-  };
+  const handleMouseDown = () => focusWindow(windowData.id);
 
   const handleTitleBarMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();

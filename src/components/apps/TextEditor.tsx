@@ -78,16 +78,22 @@ const defaultSettings: EditorSettings = {
   tabSize: 2,
 };
 
+const draftStorageKey = (id: string) => `portfolio-text-editor:${id}`;
+
 const fontOptions = [
-  { value: 'var(--font-mono)', label: 'JetBrains Mono' },
-  { value: 'var(--font-sans)', label: 'Inter' },
+  { value: 'var(--font-mono)', label: 'Geist Mono' },
+  { value: 'var(--font-sans)', label: 'Geist Sans' },
   { value: '"Cascadia Code", monospace', label: 'Cascadia Code' },
   { value: '"SF Mono", monospace', label: 'SF Mono' },
   { value: '"Fira Code", monospace', label: 'Fira Code' },
   { value: '"Courier New", monospace', label: 'Courier New' },
 ];
 
-export default function TextEditor() {
+export default function TextEditor({ initialFileName, initialFilePath, initialContent }: {
+  initialFileName?: string;
+  initialFilePath?: string;
+  initialContent?: string;
+}) {
   // Core state
   const [documents, setDocuments] = useState<Document[]>([]);
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
@@ -113,53 +119,33 @@ export default function TextEditor() {
   // Get active document
   const activeDocument = documents.find(doc => doc.id === activeDocumentId);
 
-  // Initialize with welcome document
+  // Open the requested file, restoring its local draft when one exists.
   useEffect(() => {
+    const id = initialFilePath || initialFileName || 'welcome';
+    const name = initialFileName || 'Welcome.md';
+    const defaultContent = initialFileName
+      ? initialContent || ''
+      : '# Welcome to Text Editor\n\nEdit a file, save a browser-local draft, or download a copy.';
+    let content = defaultContent;
+    try {
+      const savedDraft = localStorage.getItem(draftStorageKey(id));
+      if (savedDraft !== null) content = savedDraft;
+    } catch {
+      // Browser storage may be disabled; the editor still works in memory.
+    }
     const welcomeDoc: Document = {
-      id: 'welcome',
-      name: 'Welcome.md',
-      content: `# Welcome to Text Editor
-
-This is a fully-featured text editor built into the Fedora desktop environment.
-
-## Features
-
-- **Multi-document support** - Open and edit multiple files
-- **Advanced find & replace** - With regex and case-sensitive options
-- **Customizable interface** - Adjust fonts, themes, and layout
-- **Real-time statistics** - Track word count, character count, and line numbers
-- **Auto-save functionality** - Never lose your work
-- **File management** - Import and export documents
-
-## Getting Started
-
-1. Start typing to begin editing this document
-2. Use Ctrl+N to create a new document
-3. Use Ctrl+O to open existing files
-4. Use Ctrl+S to save your work
-5. Access settings via the gear icon
-
-## Keyboard Shortcuts
-
-- **Ctrl+N** - New document
-- **Ctrl+O** - Open file
-- **Ctrl+S** - Save document
-- **Ctrl+F** - Find & replace
-- **Ctrl+Z** - Undo
-- **Ctrl+Y** - Redo
-- **Ctrl++** - Zoom in
-- **Ctrl+-** - Zoom out
-
-Happy writing!`,
+      id,
+      name,
+      content,
       lastModified: new Date(),
-      wordCount: 0,
-      characterCount: 0,
+      wordCount: content.trim() ? content.trim().split(/\s+/).length : 0,
+      characterCount: content.length,
       saved: true,
     };
 
     setDocuments([welcomeDoc]);
     setActiveDocumentId(welcomeDoc.id);
-  }, []);
+  }, [initialFileName, initialFilePath, initialContent]);
 
   // Calculate statistics
   const calculateStats = useCallback((content: string) => {
@@ -186,13 +172,7 @@ Happy writing!`,
         : doc
     ));
 
-    // Auto-save after 2 seconds of inactivity
-    if (settings.autoSave) {
-      setTimeout(() => {
-        saveDocument();
-      }, 2000);
-    }
-  }, [activeDocumentId, settings.autoSave, calculateStats]);
+  }, [activeDocumentId, calculateStats]);
 
   // Document operations
   const createNewDocument = () => {
@@ -211,8 +191,15 @@ Happy writing!`,
     setStatusMessage('New document created');
   };
 
-  const saveDocument = () => {
+  const saveDocument = useCallback(() => {
     if (!activeDocument) return;
+
+    try {
+      localStorage.setItem(draftStorageKey(activeDocument.id), activeDocument.content);
+    } catch {
+      setStatusMessage('Browser storage unavailable — download a copy to keep this document');
+      return;
+    }
 
     setDocuments(prev => prev.map(doc => 
       doc.id === activeDocumentId 
@@ -222,7 +209,20 @@ Happy writing!`,
 
     setStatusMessage(`Saved: ${activeDocument.name}`);
     setTimeout(() => setStatusMessage(''), 3000);
-  };
+  }, [activeDocument, activeDocumentId]);
+
+  useEffect(() => {
+    if (!settings.autoSave || !activeDocument || activeDocument.saved) return;
+    const timeout = window.setTimeout(() => {
+      try {
+        localStorage.setItem(draftStorageKey(activeDocument.id), activeDocument.content);
+        setDocuments(prev => prev.map(doc => doc.id === activeDocument.id ? { ...doc, saved: true } : doc));
+      } catch {
+        setStatusMessage('Browser storage unavailable — download a copy to keep this document');
+      }
+    }, 900);
+    return () => window.clearTimeout(timeout);
+  }, [activeDocument?.id, activeDocument?.content, activeDocument?.saved, settings.autoSave]);
 
   const renameDocument = (newName: string) => {
     if (!activeDocumentId || !newName.trim()) return;
@@ -367,7 +367,7 @@ Happy writing!`,
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [saveDocument]);
 
   // Auto-update stats when content changes
   useEffect(() => {

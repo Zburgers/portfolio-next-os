@@ -1,17 +1,42 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
+import { profile } from "@/lib/profile";
 import "./globals.css";
 
-const inter = Inter({
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://portfolio-next-os.vercel.app";
+const siteTitle = `${profile.name} — ${profile.title}`;
+const description = `${profile.name} is a ${profile.title} in ${profile.location}. ${profile.summary}`;
+
 export const metadata: Metadata = {
-  title: "Fedora OS Portfolio",
-  description: "A Fedora-themed desktop environment portfolio built with Next.js",
-  // Ensure Next's metadata resolver has a canonical base to avoid runtime errors
-  // Reads `NEXT_PUBLIC_SITE_URL` at build/runtime when available.
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+  title: {
+    default: siteTitle,
+    template: "%s | Nakshatra Kundlas",
+  },
+  description,
+  metadataBase: new URL(siteUrl),
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    url: siteUrl,
+    siteName: "Nakshatra Kundlas",
+    title: siteTitle,
+    description,
+  },
+  twitter: {
+    card: "summary",
+    title: siteTitle,
+    description,
+  },
 };
 
 
@@ -21,8 +46,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className="antialiased">
         {children}
       </body>
     </html>

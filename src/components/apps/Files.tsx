@@ -6,29 +6,21 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
-  ChevronRight,
   Download,
-  FileArchive,
-  FileAudio,
   FileCode,
   FileImage,
-  FileSpreadsheet,
   FileText,
-  FileVideo,
   File,
   Folder,
-  Grid3X3,
-  HardDrive,
   Home,
   Image,
-  List,
   Monitor,
-  MoreHorizontal,
   Search,
   Trash2,
   Video,
 } from 'lucide-react';
 import { useDesktop } from '@/context/DesktopContext';
+import { profile } from '@/lib/profile';
 
 type ViewMode = 'grid' | 'list';
 
@@ -36,8 +28,8 @@ interface FileNode {
   name: string;
   type: 'folder' | 'file';
   size?: string;
-  modified?: string;
   extension?: string;
+  content?: string;
   children?: FileNode[];
 }
 
@@ -60,211 +52,36 @@ const cx = (...classes: Array<string | false | null | undefined>) =>
 
 const fileTypeLabels: Record<string, string> = {
   pdf: 'PDF Document',
-  txt: 'Text Document',
-  odp: 'Presentation',
-  iso: 'Disk Image',
-  'tar.gz': 'Tar Archive',
   jpg: 'JPEG Image',
-  png: 'PNG Image',
-  deb: 'Debian Package',
-  html: 'HTML Document',
-  css: 'Stylesheet',
-  js: 'JavaScript File',
   md: 'Markdown Document',
 };
 
 const fileSystem: FileNode = {
   name: 'Home',
   type: 'folder',
-  modified: 'Sep 30, 2025',
   children: [
     {
       name: 'Documents',
       type: 'folder',
-      modified: 'Sep 30, 2025',
       children: [
-        {
-          name: 'Projects',
-          type: 'folder',
-          modified: 'Sep 29, 2025',
-          children: [
-            {
-              name: 'fedora-redesign',
-              type: 'folder',
-              modified: 'Sep 27, 2025',
-              children: [
-                {
-                  name: 'wireframes.pdf',
-                  type: 'file',
-                  extension: 'pdf',
-                  size: '1.4 MB',
-                  modified: 'Sep 26, 2025',
-                },
-                {
-                  name: 'notes.txt',
-                  type: 'file',
-                  extension: 'txt',
-                  size: '8 KB',
-                  modified: 'Sep 25, 2025',
-                },
-              ],
-            },
-          ],
-        },
-        {
-          name: 'work',
-          type: 'folder',
-          modified: 'Sep 30, 2025',
-          children: [],
-        },
-        {
-          name: 'resume.pdf',
-          type: 'file',
-          extension: 'pdf',
-          size: '245 KB',
-          modified: 'Sep 30, 2025',
-        },
-        {
-          name: 'notes.txt',
-          type: 'file',
-          extension: 'txt',
-          size: '1.2 KB',
-          modified: 'Sep 30, 2025',
-        },
-        {
-          name: 'presentation.odp',
-          type: 'file',
-          extension: 'odp',
-          size: '8.7 MB',
-          modified: 'Sep 30, 2025',
-        },
-      ],
-    },
-    {
-      name: 'Downloads',
-      type: 'folder',
-      modified: 'Sep 30, 2025',
-      children: [
-        {
-          name: 'fedora-42.iso',
-          type: 'file',
-          extension: 'iso',
-          size: '2.4 GB',
-          modified: 'Dec 04, 2025',
-        },
-        {
-          name: 'nodejs-18.tar.gz',
-          type: 'file',
-          extension: 'tar.gz',
-          size: '34 MB',
-          modified: 'Sep 28, 2025',
-        },
-        {
-          name: 'wallpaper.jpg',
-          type: 'file',
-          extension: 'jpg',
-          size: '6.8 MB',
-          modified: 'Sep 28, 2025',
-        },
-        {
-          name: 'vscode.deb',
-          type: 'file',
-          extension: 'deb',
-          size: '92 MB',
-          modified: 'Sep 27, 2025',
-        },
-      ],
-    },
-    {
-      name: 'Pictures',
-      type: 'folder',
-      modified: 'Sep 18, 2025',
-      children: [
-        {
-          name: 'holiday.png',
-          type: 'file',
-          extension: 'png',
-          size: '4.6 MB',
-          modified: 'Sep 15, 2025',
-        },
-      ],
-    },
-    {
-      name: 'Videos',
-      type: 'folder',
-      modified: 'Sep 10, 2025',
-      children: [
-        {
-          name: 'launch-demo.mp4',
-          type: 'file',
-          extension: 'mp4',
-          size: '540 MB',
-          modified: 'Sep 08, 2025',
-        },
-      ],
-    },
-    {
-      name: 'Desktop',
-      type: 'folder',
-      modified: 'Sep 11, 2025',
-      children: [],
-    },
-    {
-      name: 'portfolio',
-      type: 'folder',
-      modified: 'Sep 30, 2025',
-      children: [
-        {
-          name: 'index.html',
-          type: 'file',
-          extension: 'html',
-          size: '14 KB',
-          modified: 'Sep 30, 2025',
-        },
-        {
-          name: 'style.css',
-          type: 'file',
-          extension: 'css',
-          size: '6 KB',
-          modified: 'Sep 30, 2025',
-        },
-        {
-          name: 'script.js',
-          type: 'file',
-          extension: 'js',
-          size: '12 KB',
-          modified: 'Sep 30, 2025',
-        },
+        { name: 'resume.pdf', type: 'file', extension: 'pdf' },
         {
           name: 'README.md',
           type: 'file',
           extension: 'md',
-          size: '3 KB',
-          modified: 'Sep 30, 2025',
+          content: `${profile.name}\n\n${profile.title} based in ${profile.location}.\n\n${profile.summary}\n\nGitHub: ${profile.githubUrl}\nLinkedIn: ${profile.linkedinUrl}`,
         },
       ],
     },
+    { name: 'Downloads', type: 'folder', children: [] },
     {
-      name: 'Trash',
+      name: 'Pictures',
       type: 'folder',
-      modified: 'Sep 06, 2025',
-      children: [
-        {
-          name: 'Windows11.iso',
-          type: 'file',
-          extension: 'iso',
-          size: '5.4 GB',
-          modified: 'Dec 05, 2025',
-        },
-      ],
+      children: [{ name: 'Fedora wallpaper.jpg', type: 'file', extension: 'jpg' }],
     },
-    {
-      name: 'getting-started.pdf',
-      type: 'file',
-      extension: 'pdf',
-      size: '2.1 MB',
-      modified: 'Sep 12, 2025',
-    },
+    { name: 'Videos', type: 'folder', children: [] },
+    { name: 'Desktop', type: 'folder', children: [] },
+    { name: 'Trash', type: 'folder', children: [] },
   ],
 };
 
@@ -280,8 +97,7 @@ const sidebarDestinations: SidebarDestination[] = [
 
 const recentItems: RecentItem[] = [
   { icon: FileText, name: 'resume.pdf', detail: 'Documents', path: ['Documents'], target: 'resume.pdf' },
-  { icon: FileText, name: 'notes.txt', detail: 'Documents', path: ['Documents'], target: 'notes.txt' },
-  { icon: FileImage, name: 'wallpaper.jpg', detail: 'Downloads', path: ['Downloads'], target: 'wallpaper.jpg' },
+  { icon: FileCode, name: 'README.md', detail: 'Documents', path: ['Documents'], target: 'README.md' },
 ];
 
 function buildPathFromSegments(segments: string[]): FileNode[] {
@@ -307,34 +123,13 @@ function getNodeIcon(node: FileNode): { icon: LucideIcon; className: string } {
     return { icon: Folder, className: 'text-amber-600' };
   }
 
-  // Special case for Windows ISO file - use Windows logo
-  if (node.name.toLowerCase().includes('windows') && node.extension === 'iso') {
-    return { icon: File, className: 'text-primary' };
-  }
-
   switch (node.extension) {
     case 'pdf':
       return { icon: FileText, className: 'text-red-600' };
-    case 'txt':
-      return { icon: FileText, className: 'text-blue-600' };
-    case 'odp':
-      return { icon: FileSpreadsheet, className: 'text-orange-600' };
-    case 'iso':
-    case 'deb':
-    case 'tar.gz':
-      return { icon: FileArchive, className: 'text-purple-600' };
     case 'jpg':
-    case 'png':
       return { icon: FileImage, className: 'text-green-600' };
-    case 'html':
-    case 'css':
-    case 'js':
     case 'md':
       return { icon: FileCode, className: 'text-blue-600' };
-    case 'mp4':
-      return { icon: FileVideo, className: 'text-purple-600' };
-    case 'mp3':
-      return { icon: FileAudio, className: 'text-pink-600' };
     default:
       return { icon: File, className: 'text-[color:var(--text-secondary)]' };
   }
@@ -358,7 +153,7 @@ function getFolderSummary(node: FileNode): string {
     return count === 1 ? '1 item' : `${count} items`;
   }
 
-  return node.size ?? '—';
+  return node.size ?? getTypeLabel(node);
 }
 
 export default function Files() {
@@ -399,11 +194,6 @@ export default function Files() {
   const canGoForward = forwardStack.length > 0;
   const canGoUp = pathStack.length > 1;
 
-  const breadcrumbs = pathStack.map((node, index) => ({
-    node,
-    isLast: index === pathStack.length - 1,
-  }));
-
   function buildNodeKey(node: FileNode) {
     return [...pathStack.map((item) => item.name), node.name].join('/');
   }
@@ -434,17 +224,15 @@ export default function Files() {
       // Code files that should open in code editor
       const codeExtensions = ['html', 'css', 'js', 'ts', 'jsx', 'tsx', 'py', 'java', 'cpp', 'c', 'h', 'php', 'rb', 'go', 'rs', 'swift', 'kt', 'scala', 'vue', 'svelte'];
       
-      if (extension && textExtensions.includes(extension)) {
-        // Open in text editor
+      if (node.name.toLowerCase() === 'resume.pdf') {
+        window.open(profile.resumeUrl, '_blank', 'noopener,noreferrer');
+      } else if (extension === 'jpg' || extension === 'png') {
+        window.open('/F42-01-day.jpg', '_blank', 'noopener,noreferrer');
+      } else if ((extension && textExtensions.includes(extension)) || (extension && codeExtensions.includes(extension))) {
         openWindow('text-editor', `Text Editor - ${node.name}`, {
           fileName: node.name,
           filePath: pathStack.map(p => p.name).join('/') + '/' + node.name,
-        });
-      } else if (extension && codeExtensions.includes(extension)) {
-        // Open in code editor
-        openWindow('code-editor', `Code Editor - ${node.name}`, {
-          fileName: node.name,
-          filePath: pathStack.map(p => p.name).join('/') + '/' + node.name,
+          content: node.content ?? '',
         });
       }
       // For other file types, we could add more handlers here
@@ -570,9 +358,9 @@ export default function Files() {
                   ? 'hover:bg-surface-hover text-primary'
                   : 'text-muted cursor-not-allowed'
               )}
-              aria-label="Go back"
-            >
-              ←
+          aria-label="Go back"
+          >
+              <ArrowLeft className="h-4 w-4" />
             </button>
             <button
               type="button"
@@ -586,7 +374,7 @@ export default function Files() {
               )}
               aria-label="Go forward"
             >
-              →
+              <ArrowRight className="h-4 w-4" />
             </button>
             <button
               type="button"
@@ -600,18 +388,30 @@ export default function Files() {
               )}
               aria-label="Go up"
             >
-              ↑
+              <ArrowUp className="h-4 w-4" />
             </button>
           </div>
 
           {/* Current Folder Name */}
           <div className="ml-4 text-lg font-medium text-primary">
             {currentFolder.name}
+            <span className="ml-3 hidden text-xs font-normal text-secondary sm:inline">Curated portfolio files · browser preview</span>
           </div>
         </div>
 
         {/* View Options */}
         <div className="flex items-center gap-2">
+          <label className="flex h-8 items-center gap-2 rounded border border-color px-2 text-secondary">
+            <Search className="h-3.5 w-3.5" />
+            <input
+              aria-label="Search this folder"
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search"
+              className="w-24 bg-transparent text-sm text-primary outline-none placeholder:text-muted sm:w-36"
+            />
+          </label>
           <button
             type="button"
             onClick={() => setViewMode('grid')}
@@ -674,7 +474,7 @@ export default function Files() {
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">
-                Recent
+                Quick access
               </p>
               <div className="space-y-1">
                 {recentItems.map((item) => {
@@ -701,12 +501,9 @@ export default function Files() {
           <div className="border-t border-color px-4 py-4">
             <div className="rounded bg-surface-muted p-3">
               <div className="flex items-center justify-between text-xs font-medium text-secondary mb-2">
-                <span>162 GB Free</span>
-                <span>256 GB</span>
+                <span>Browser preview</span>
               </div>
-              <div className="h-2 w-full overflow-hidden rounded-full border-color">
-                <div className="h-full w-[42%] rounded-full bg-accent" />
-              </div>
+              <p className="text-xs leading-5 text-muted">This file browser cannot read your device storage.</p>
             </div>
           </div>
         </aside>
@@ -743,6 +540,7 @@ export default function Files() {
                         type="button"
                         onClick={() => setSelectedItem(key)}
                         onDoubleClick={() => handleOpenItem(item)}
+                        onKeyDown={(event) => { if (event.key === 'Enter') handleOpenItem(item); }}
                         className={cx(
                           'group flex flex-col gap-3 rounded p-4 text-left transition-all duration-200',
                           isSelected
@@ -750,19 +548,9 @@ export default function Files() {
                             : 'hover:bg-surface-hover'
                         )}
                       >
-                        {item.name.toLowerCase().includes('windows') && item.extension === 'iso' ? (
-                          <div className="flex h-12 w-12 items-center justify-center rounded text-primary">
-                            <img
-                              src="/windows-logo.svg"
-                              alt="Windows Logo"
-                              className="h-8 w-8"
-                            />
-                          </div>
-                        ) : (
-                          <span className={cx('flex h-12 w-12 items-center justify-center rounded', iconColor)}>
-                            <Icon className="h-8 w-8" />
-                          </span>
-                        )}
+                        <span className={cx('flex h-12 w-12 items-center justify-center rounded', iconColor)}>
+                          <Icon className="h-8 w-8" />
+                        </span>
                         <div className="flex flex-col gap-1">
                           <span className="text-sm font-semibold leading-tight text-primary">
                             {item.name}
@@ -777,11 +565,10 @@ export default function Files() {
                 </div>
               ) : (
                 <div className="rounded border border-color bg-surface">
-                  <div className="grid grid-cols-[minmax(0,2fr)_120px_150px_150px] gap-2 px-4 py-3 text-xs font-medium uppercase tracking-wide text-muted border-b border-color">
+                  <div className="grid grid-cols-[minmax(0,2fr)_120px_150px] gap-2 px-4 py-3 text-xs font-medium uppercase tracking-wide text-muted border-b border-color">
                     <span>Name</span>
                     <span>Size</span>
                     <span>Type</span>
-                    <span>Modified</span>
                   </div>
                   <div className="divide-y border-color">
                     {filteredItems.map((item) => {
@@ -795,27 +582,18 @@ export default function Files() {
                           type="button"
                           onClick={() => setSelectedItem(key)}
                           onDoubleClick={() => handleOpenItem(item)}
+                          onKeyDown={(event) => { if (event.key === 'Enter') handleOpenItem(item); }}
                           className={cx(
-                            'grid w-full grid-cols-[minmax(0,2fr)_120px_150px_150px] items-center gap-2 px-4 py-3 text-left text-sm transition-colors duration-200',
+                            'grid w-full grid-cols-[minmax(0,2fr)_120px_150px] items-center gap-2 px-4 py-3 text-left text-sm transition-colors duration-200',
                             isSelected
                               ? 'bg-accent text-white'
                               : 'hover:bg-surface-hover'
                           )}
                         >
                           <span className="flex items-center gap-3">
-                            {item.name.toLowerCase().includes('windows') && item.extension === 'iso' ? (
-                              <div className="flex h-8 w-8 items-center justify-center rounded text-primary">
-                                <img
-                                  src="/windows-logo.svg"
-                                  alt="Windows Logo"
-                                  className="h-4 w-4"
-                                />
-                              </div>
-                            ) : (
-                              <span className={cx('flex h-8 w-8 items-center justify-center rounded', className)}>
-                                <Icon className="h-4 w-4" />
-                              </span>
-                            )}
+                            <span className={cx('flex h-8 w-8 items-center justify-center rounded', className)}>
+                              <Icon className="h-4 w-4" />
+                            </span>
                             <span className={cx('truncate font-medium', isSelected ? 'text-white' : 'text-primary')}>{item.name}</span>
                           </span>
                           <span className={cx('text-sm', isSelected ? 'text-white/80' : 'text-secondary')}>
@@ -823,9 +601,6 @@ export default function Files() {
                           </span>
                           <span className={cx('text-sm', isSelected ? 'text-white/80' : 'text-secondary')}>
                             {getTypeLabel(item)}
-                          </span>
-                          <span className={cx('text-sm', isSelected ? 'text-white/80' : 'text-secondary')}>
-                            {item.modified ?? '—'}
                           </span>
                         </button>
                       );

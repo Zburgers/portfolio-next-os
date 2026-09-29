@@ -14,123 +14,75 @@ export interface GitHubTreeItem {
   size?: number;
 }
 
-export async function fetchRepoFileContent(repo: string, path: string): Promise<GitHubFileContent | null> {
-  try {
-    const token = process.env.GITHUB_TOKEN;
-    const headers: HeadersInit = {
-      'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'Portfolio-OS/1.0'
-    };
-
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/contents/${path}`, {
-      headers,
-      next: { revalidate: 3600 } // Cache for 1 hour
-    });
-
-    if (!response.ok) {
-      console.error(`GitHub API error: ${response.status}`);
-      return null;
-    }
-
-    const data = await response.json();
-
-    if (Array.isArray(data)) {
-      return null; // It's a directory, not a file
-    }
-
-    if (data.content && data.encoding === 'base64') {
-      const content = Buffer.from(data.content, 'base64').toString('utf-8');
-      return {
-        name: data.name,
-        path: data.path,
-        content,
-        type: 'file'
-      };
-    }
-
-    return null;
-  } catch (error) {
-    console.error('Error fetching file content:', error);
-    return null;
-  }
+function getHeaders(): HeadersInit {
+  const headers: Record<string, string> = {
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': 'Portfolio-OS',
+  };
+  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  return headers;
 }
 
-export async function fetchRepoTree(repo: string, branch: string = 'main'): Promise<GitHubTreeItem[]> {
-  try {
-    const token = process.env.GITHUB_TOKEN;
-    const headers: HeadersInit = {
-      'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'Portfolio-OS/1.0'
-    };
+export async function fetchRepoFileContent(repo: string, path: string): Promise<GitHubFileContent | null> {
+  const safePath = path.split('/').map(encodeURIComponent).join('/');
+  const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/contents/${safePath}`, {
+    headers: getHeaders(),
+    next: { revalidate: 3600 },
+  });
+  if (!response.ok) throw new Error(`GitHub file request failed (${response.status})`);
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+  const data = await response.json();
+  if (Array.isArray(data) || data.type !== 'file' || data.encoding !== 'base64' || !data.content) return null;
 
-    // First, get the branch info to get the tree SHA
-    const branchResponse = await fetch(`${GITHUB_API_BASE}/repos/${repo}/branches/${branch}`, {
-      headers,
-      next: { revalidate: 3600 }
-    });
+  return {
+    name: data.name,
+    path: data.path,
+    content: Buffer.from(data.content, 'base64').toString('utf-8'),
+    type: 'file',
+  };
+}
 
-    if (!branchResponse.ok) {
-      // Try 'master' if 'main' doesn't exist
-      const masterResponse = await fetch(`${GITHUB_API_BASE}/repos/${repo}/branches/master`, {
-        headers,
-        next: { revalidate: 3600 }
-      });
+export async function fetchRepoTree(repo: string, branch?: string): Promise<GitHubTreeItem[]> {
+  const repoResponse = await fetch(`${GITHUB_API_BASE}/repos/${repo}`, {
+    headers: getHeaders(),
+    next: { revalidate: 3600 },
+  });
+  if (!repoResponse.ok) throw new Error(`GitHub repository request failed (${repoResponse.status})`);
 
-      if (!masterResponse.ok) {
-        console.error(`GitHub API error: ${branchResponse.status}`);
-        return [];
-      }
+  const repoData = await repoResponse.json();
+  const ref = branch || repoData.default_branch;
+  if (!ref) throw new Error('GitHub did not return a default branch for this repository');
 
-      const masterData = await masterResponse.json();
-      const treeSha = masterData.commit.commit.tree.sha;
+  const branchResponse = await fetch(`${GITHUB_API_BASE}/repos/${repo}/branches/${encodeURIComponent(ref)}`, {
+    headers: getHeaders(),
+    next: { revalidate: 3600 },
+  });
+  if (!branchResponse.ok) throw new Error(`GitHub branch request failed (${branchResponse.status})`);
 
-      // Get the tree
-      const treeResponse = await fetch(`${GITHUB_API_BASE}/repos/${repo}/git/trees/${treeSha}?recursive=1`, {
-        headers,
-        next: { revalidate: 3600 }
-      });
+  const branchData = await branchResponse.json();
+  const treeSha = branchData.commit?.commit?.tree?.sha;
+  if (!treeSha) throw new Error('GitHub did not return a commit tree for this branch');
 
-      if (!treeResponse.ok) {
-        return [];
-      }
+  const treeResponse = await fetch(`${GITHUB_API_BASE}/repos/${repo}/git/trees/${treeSha}?recursive=1`, {
+    headers: getHeaders(),
+    next: { revalidate: 3600 },
+  });
+  if (!treeResponse.ok) throw new Error(`GitHub tree request failed (${treeResponse.status})`);
 
-      const treeData = await treeResponse.json();
-      return treeData.tree || [];
-    }
-
-    const branchData = await branchResponse.json();
-    const treeSha = branchData.commit.commit.tree.sha;
-
-    // Get the tree
-    const treeResponse = await fetch(`${GITHUB_API_BASE}/repos/${repo}/git/trees/${treeSha}?recursive=1`, {
-      headers,
-      next: { revalidate: 3600 }
-    });
-
-    if (!treeResponse.ok) {
-      return [];
-    }
-
-    const treeData = await treeResponse.json();
-    return treeData.tree || [];
-  } catch (error) {
-    console.error('Error fetching repo tree:', error);
-    return [];
-  }
+  const treeData = await treeResponse.json();
+  return Array.isArray(treeData.tree) ? treeData.tree : [];
 }
 
 export function extractRepoFromUrl(githubUrl: string): string | null {
   try {
-    const match = githubUrl.match(/github\.com\/([^\/]+\/[^\/]+)/);
-    return match ? match[1] : null;
+    const url = new URL(githubUrl);
+    if (url.hostname.toLowerCase() !== 'github.com') return null;
+    const [owner, rawRepo] = url.pathname.split('/').filter(Boolean);
+    const repo = rawRepo?.replace(/\.git$/i, '');
+    return owner && repo && /^[\w.-]+$/.test(owner) && /^[\w.-]+$/.test(repo)
+      ? `${owner}/${repo}`
+      : null;
   } catch {
     return null;
   }

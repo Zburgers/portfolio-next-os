@@ -1,10 +1,29 @@
 'use client';
 
-import React, { useRef, useEffect, KeyboardEvent } from 'react';
+import React, { useRef, useEffect, useCallback, KeyboardEvent } from 'react';
 import { useTerminal } from '@/hooks/useTerminal';
 import TerminalOutput from '@/components/Terminal/TerminalOutput';
+import { useDesktop } from '@/context/DesktopContext';
+import { profile } from '@/lib/profile';
 
 export default function Terminal() {
+  const { openWindow } = useDesktop();
+  const handleOpen = useCallback((item: string) => {
+    if (item === 'projects') {
+      openWindow('portfolio', 'Selected work', { initialTab: 'work' });
+      return;
+    }
+    const urls: Record<string, string> = {
+      resume: profile.resumeUrl,
+      contact: `mailto:${profile.email}`,
+      github: profile.githubUrl,
+      linkedin: profile.linkedinUrl,
+      x: profile.xUrl,
+    };
+    const url = urls[item];
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+  }, [openWindow]);
+
   const {
     lines,
     currentInput,
@@ -18,7 +37,7 @@ export default function Terminal() {
     navigateHistory,
     getCompletions,
     addLine,
-  } = useTerminal();
+  } = useTerminal({ onOpen: handleOpen });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);

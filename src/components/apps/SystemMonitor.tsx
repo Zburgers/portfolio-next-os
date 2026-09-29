@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Cpu, 
@@ -11,7 +11,6 @@ import {
   ThermometerSun,
   Zap,
   Server,
-  Clock
 } from 'lucide-react';
 
 interface SystemStat {
@@ -127,37 +126,29 @@ function CpuRing({ usage }: { usage: number }) {
 export default function SystemMonitor() {
   const [activeTab, setActiveTab] = useState<'resources' | 'processes'>('resources');
   const [cpuUsage, setCpuUsage] = useState(35);
+  const cpuUsageRef = useRef(35);
   const [memoryUsage, setMemoryUsage] = useState(48);
-  const [diskUsage, setDiskUsage] = useState(62);
+  const diskUsage = 62;
   const [networkIn, setNetworkIn] = useState(1.2);
   const [networkOut, setNetworkOut] = useState(0.4);
-  const [uptime, setUptime] = useState({ hours: 2, minutes: 34 });
   const [processes, setProcesses] = useState<ProcessInfo[]>([]);
   const [cpuHistory, setCpuHistory] = useState<number[]>(Array(20).fill(30));
 
   // Simulate dynamic system stats
   useEffect(() => {
     const interval = setInterval(() => {
-      setCpuUsage(prev => Math.max(15, Math.min(85, prev + (Math.random() - 0.5) * 10)));
+      cpuUsageRef.current = Math.max(15, Math.min(85, cpuUsageRef.current + (Math.random() - 0.5) * 10));
+      setCpuUsage(cpuUsageRef.current);
       setMemoryUsage(prev => Math.max(30, Math.min(75, prev + (Math.random() - 0.5) * 3)));
       setNetworkIn(prev => Math.max(0.1, Math.min(5, prev + (Math.random() - 0.5) * 0.5)));
       setNetworkOut(prev => Math.max(0.05, Math.min(2, prev + (Math.random() - 0.5) * 0.2)));
       setProcesses(generateProcesses());
-      setCpuHistory(prev => [...prev.slice(1), cpuUsage]);
-      
-      // Update uptime
-      setUptime(prev => {
-        const newMinutes = prev.minutes + 1;
-        if (newMinutes >= 60) {
-          return { hours: prev.hours + 1, minutes: 0 };
-        }
-        return { ...prev, minutes: newMinutes };
-      });
+      setCpuHistory(prev => [...prev.slice(1), cpuUsageRef.current]);
     }, 2000);
 
     setProcesses(generateProcesses());
     return () => clearInterval(interval);
-  }, [cpuUsage]);
+  }, []);
 
   const systemStats: SystemStat[] = [
     {
@@ -206,14 +197,11 @@ export default function SystemMonitor() {
           </div>
           <div>
             <h1 className="text-base font-semibold">System Monitor</h1>
-            <p className="text-xs text-[color:var(--text-secondary)]">Fedora Linux 42</p>
+            <p className="text-xs text-[color:var(--text-secondary)]">Simulated preview</p>
           </div>
         </div>
         
-        <div className="flex items-center gap-2 text-xs text-[color:var(--text-secondary)]">
-          <Clock className="w-3.5 h-3.5" />
-          <span>Uptime: {uptime.hours}h {uptime.minutes}m</span>
-        </div>
+        <span className="rounded-full border border-[color:var(--color-border)] px-2.5 py-1 text-xs text-[color:var(--text-secondary)]">Sample data</span>
       </div>
 
       {/* Tabs */}
@@ -243,6 +231,7 @@ export default function SystemMonitor() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-5">
+        <p className="mb-4 rounded-lg border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] p-3 text-xs text-[color:var(--text-secondary)]">Values animate for demonstration. A browser cannot inspect this device’s CPU, memory, network, temperature, or processes.</p>
         <AnimatePresence mode="wait">
           {activeTab === 'resources' ? (
             <motion.div
@@ -318,7 +307,7 @@ export default function SystemMonitor() {
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <Network className="w-4 h-4 text-blue-500" />
-                    <span className="text-sm font-medium">Network</span>
+                    <span className="text-sm font-medium">Network sample</span>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
@@ -340,7 +329,7 @@ export default function SystemMonitor() {
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <ThermometerSun className="w-4 h-4 text-orange-500" />
-                    <span className="text-sm font-medium">Temperature</span>
+                    <span className="text-sm font-medium">Thermal sample</span>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
@@ -355,7 +344,7 @@ export default function SystemMonitor() {
                 </motion.div>
               </div>
 
-              {/* System Info */}
+              {/* Simulation note */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -364,26 +353,9 @@ export default function SystemMonitor() {
               >
                 <div className="flex items-center gap-2 mb-3">
                   <Zap className="w-4 h-4 text-purple-500" />
-                  <span className="text-sm font-medium">System Information</span>
+                  <span className="text-sm font-medium">About this panel</span>
                 </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-[color:var(--text-muted)]">Kernel</span>
-                    <p className="font-mono text-[color:var(--text-secondary)]">6.12.0-300.fc42.x86_64</p>
-                  </div>
-                  <div>
-                    <span className="text-[color:var(--text-muted)]">Memory</span>
-                    <p className="font-mono text-[color:var(--text-secondary)]">15.2 GB / 32 GB</p>
-                  </div>
-                  <div>
-                    <span className="text-[color:var(--text-muted)]">CPU</span>
-                    <p className="font-mono text-[color:var(--text-secondary)]">Intel Core i9 @ 3.5GHz</p>
-                  </div>
-                  <div>
-                    <span className="text-[color:var(--text-muted)]">Graphics</span>
-                    <p className="font-mono text-[color:var(--text-secondary)]">Intel Iris Xe</p>
-                  </div>
-                </div>
+                <p className="text-sm text-[color:var(--text-secondary)]">The process list and resource charts are illustrative UI data, not measurements from the host system.</p>
               </motion.div>
             </motion.div>
           ) : (

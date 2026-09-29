@@ -1,1030 +1,193 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { 
-  ExternalLink, Github, Mail, MapPin, Code, Award, Users, 
-  Play, Briefcase, GraduationCap, Trophy, Sparkles, ArrowRight,
-  Linkedin, Terminal, Zap, Heart, GitBranch, Activity, Star, X,
-  Loader2
-} from 'lucide-react';
-import { projects, Project } from '@/lib/projects';
-import { techIcons, skills, getSkillsByCategory } from '@/lib/tech-icons';
+import { useEffect, useState } from 'react';
+import { ArrowRight, ArrowUpRight, Download, Github, Linkedin, Mail, MapPin, TerminalSquare } from 'lucide-react';
 import { useDesktop } from '@/context/DesktopContext';
+import { profile } from '@/lib/profile';
+import { projects, type Project } from '@/lib/projects';
 
-type ActiveTab = 'about' | 'projects' | 'skills' | 'experience' | 'education' | 'contact';
+type PortfolioTab = 'overview' | 'work' | 'focus' | 'background' | 'contact';
 
-const PROFILE_IMAGE = 'https://avatars.githubusercontent.com/u/95270855?v=4';
-const GITHUB_USERNAME = 'Zburgers';
-
-// Glassmorphism Card Component with hover glow effect
-const GlassCard = ({ 
-  children, 
-  className = '', 
-  hover = true,
-  glowColor = 'var(--accent)'
-}: { 
-  children: React.ReactNode; 
-  className?: string;
-  hover?: boolean;
-  glowColor?: string;
-}) => {
-  return (
-    <div 
-      className={`
-        relative rounded-xl border backdrop-blur-sm overflow-hidden
-        bg-[var(--surface)]/80 border-[var(--border)]
-        ${hover ? 'group transition-all duration-300 hover:border-[var(--accent-border)] hover:shadow-xl hover:-translate-y-0.5' : ''}
-        ${className}
-      `}
-    >
-      {/* Glow effect on hover */}
-      {hover && (
-        <div 
-          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-xl"
-          style={{
-            background: `radial-gradient(400px circle at 50% 50%, ${glowColor}, transparent 60%)`,
-            opacity: 0.15
-          }}
-        />
-      )}
-      <div className="relative z-10">{children}</div>
-    </div>
-  );
-};
-
-// Certification Modal Component
-const CertificationModal = ({ cert, onClose }: { cert: { title: string; issuer: string; icon: string; description: string; date?: string; credentialId?: string }; onClose: () => void }) => {
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div 
-        className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl max-w-sm w-full p-6 relative shadow-2xl"
-        onClick={e => e.stopPropagation()}
-      >
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-        >
-          <X size={20} />
-        </button>
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">{cert.icon}</div>
-          <h3 className="text-xl font-bold mb-1">{cert.title}</h3>
-          <p className="text-sm text-[var(--accent)] font-medium">{cert.issuer}</p>
-          {cert.date && <p className="text-xs text-[var(--text-muted)] mb-2">{cert.date}</p>}
-          {cert.credentialId && (
-            <p className="text-xs text-[var(--text-muted)] mb-3 font-mono bg-[var(--surface-muted)] px-2 py-1 rounded inline-block">
-              ID: {cert.credentialId}
-            </p>
-          )}
-          <p className="text-sm text-[var(--text-secondary)] leading-relaxed mt-3">{cert.description}</p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Animated skill bar component with glow
-const SkillBar = ({ name, icon, proficiency, delay = 0 }: { 
-  name: string; 
-  icon: string; 
-  proficiency: number;
-  delay?: number;
-}) => {
-  const [width, setWidth] = useState(0);
-  
-  useEffect(() => {
-    const timer = setTimeout(() => setWidth(proficiency), delay);
-    return () => clearTimeout(timer);
-  }, [proficiency, delay]);
-
-  return (
-    <div className="flex flex-col gap-1.5 group/skill">
-      <div className="flex items-center gap-2">
-        <span className="text-sm group-hover/skill:scale-110 transition-transform">{icon}</span>
-        <span className="flex-1 text-sm font-medium">{name}</span>
-        <span className="text-xs font-semibold text-[var(--accent)]">{proficiency}%</span>
-      </div>
-      <div className="h-2 bg-[var(--surface-muted)] rounded-full overflow-hidden">
-        <div 
-          className="h-full rounded-full transition-all duration-700 ease-out relative"
-          style={{ 
-            width: `${width}%`, 
-            transitionDelay: `${delay}ms`,
-            background: 'linear-gradient(90deg, var(--accent), #a855f7)'
-          }}
-        >
-          <div className="absolute inset-0 bg-white/20 animate-pulse" />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// GitHub Stats with Real API Data
-interface GitHubStats {
-  publicRepos: number;
-  followers: number;
-  following: number;
-  totalStars: number;
-  loading: boolean;
-  error: boolean;
-}
-
-const GitHubStatsCard = ({ username }: { username: string }) => {
-  const [stats, setStats] = useState<GitHubStats>({
-    publicRepos: 0,
-    followers: 0,
-    following: 0,
-    totalStars: 0,
-    loading: true,
-    error: false
-  });
-
-  useEffect(() => {
-    const fetchGitHubStats = async () => {
-      try {
-        // Fetch user data
-        const userRes = await fetch(`https://api.github.com/users/${username}`);
-        if (!userRes.ok) throw new Error('Failed to fetch user data');
-        const userData = await userRes.json();
-
-        // Fetch repos to calculate stars
-        const reposRes = await fetch(`https://api.github.com/users/${username}/repos?per_page=100`);
-        if (!reposRes.ok) throw new Error('Failed to fetch repos');
-        const reposData = await reposRes.json();
-        
-        const totalStars = reposData.reduce((acc: number, repo: any) => acc + repo.stargazers_count, 0);
-
-        setStats({
-          publicRepos: userData.public_repos,
-          followers: userData.followers,
-          following: userData.following,
-          totalStars,
-          loading: false,
-          error: false
-        });
-      } catch (error) {
-        console.error('Error fetching GitHub stats:', error);
-        setStats(prev => ({ ...prev, loading: false, error: true }));
-      }
-    };
-
-    fetchGitHubStats();
-  }, [username]);
-
-  return (
-    <GlassCard className="p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2 font-semibold">
-          <Github size={20} className="text-[var(--accent)]" />
-          <h3>GitHub Activity</h3>
-        </div>
-        <a 
-          href={`https://github.com/${username}`} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-sm text-[var(--accent)] hover:underline"
-        >
-          @{username} <ExternalLink size={14} />
-        </a>
-      </div>
-      
-      {/* GitHub Contribution Graph */}
-      <div className="mb-4 p-4 bg-[var(--surface-muted)] rounded-xl overflow-hidden">
-        <img 
-          src={`https://ghchart.rshah.org/3b82f6/${username}`}
-          alt="GitHub Contribution Graph"
-          className="w-full rounded"
-        />
-      </div>
-      
-      {/* Real GitHub Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="group flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-muted)] hover:bg-[var(--accent-soft)] transition-all cursor-default">
-          <GitBranch size={18} className="text-[var(--accent)] group-hover:scale-110 transition-transform" />
-          <div>
-            {stats.loading ? (
-              <Loader2 size={18} className="animate-spin text-[var(--accent)]" />
-            ) : (
-              <span className="block text-lg font-bold">{stats.error ? '—' : stats.publicRepos}</span>
-            )}
-            <span className="text-xs text-[var(--text-muted)]">Repositories</span>
-          </div>
-        </div>
-        <div className="group flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-muted)] hover:bg-[var(--accent-soft)] transition-all cursor-default">
-          <Star size={18} className="text-yellow-500 group-hover:scale-110 transition-transform" />
-          <div>
-            {stats.loading ? (
-              <Loader2 size={18} className="animate-spin text-[var(--accent)]" />
-            ) : (
-              <span className="block text-lg font-bold">{stats.error ? '—' : stats.totalStars}</span>
-            )}
-            <span className="text-xs text-[var(--text-muted)]">Stars Earned</span>
-          </div>
-        </div>
-        <div className="group flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-muted)] hover:bg-[var(--accent-soft)] transition-all cursor-default">
-          <Users size={18} className="text-green-500 group-hover:scale-110 transition-transform" />
-          <div>
-            {stats.loading ? (
-              <Loader2 size={18} className="animate-spin text-[var(--accent)]" />
-            ) : (
-              <span className="block text-lg font-bold">{stats.error ? '—' : stats.followers}</span>
-            )}
-            <span className="text-xs text-[var(--text-muted)]">Followers</span>
-          </div>
-        </div>
-        <div className="group flex items-center gap-3 p-3 rounded-xl bg-[var(--surface-muted)] hover:bg-[var(--accent-soft)] transition-all cursor-default">
-          <Heart size={18} className="text-red-500 group-hover:scale-110 transition-transform" />
-          <div>
-            <span className="block text-lg font-bold">YSoC</span>
-            <span className="text-xs text-[var(--text-muted)]">Open Source</span>
-          </div>
-        </div>
-      </div>
-    </GlassCard>
-  );
-};
-
-// Experience Item Component with enhanced styling
-const ExperienceItem = ({ 
-  title, 
-  organization, 
-  date, 
-  description, 
-  tags,
-  type 
-}: {
-  title: string;
-  organization: string;
-  date: string;
-  description: string;
-  tags: string[];
-  type: 'work' | 'education' | 'opensource';
-}) => {
-  const iconMap = {
-    work: Briefcase,
-    education: GraduationCap,
-    opensource: Github
-  };
-  const colorMap = {
-    work: 'from-blue-500 to-blue-600',
-    education: 'from-purple-500 to-purple-600',
-    opensource: 'from-green-500 to-green-600'
-  };
-  const glowMap = {
-    work: 'rgba(59, 130, 246, 0.3)',
-    education: 'rgba(168, 85, 247, 0.3)',
-    opensource: 'rgba(34, 197, 94, 0.3)'
-  };
-  const Icon = iconMap[type];
-  const gradient = colorMap[type];
-  
-  return (
-    <GlassCard className="p-5" glowColor={glowMap[type]}>
-      <div className="flex gap-4">
-        <div className={`flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform`}>
-          <Icon size={22} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 mb-2">
-            <div>
-              <h3 className="font-semibold text-lg">{title}</h3>
-              <p className="text-sm text-[var(--accent)]">{organization}</p>
-            </div>
-            <span className="text-xs font-medium text-[var(--accent)] bg-[var(--accent-soft)] px-3 py-1.5 rounded-full whitespace-nowrap border border-[var(--accent-border)]">{date}</span>
-          </div>
-          <p className="text-sm text-[var(--text-secondary)] mb-3 leading-relaxed">{description}</p>
-          <div className="flex flex-wrap gap-2">
-            {tags.map((tag, i) => (
-              <span key={i} className="px-2.5 py-1 text-xs font-medium bg-[var(--surface-muted)] rounded-full hover:bg-[var(--accent-soft)] transition-colors">{tag}</span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </GlassCard>
-  );
-};
-
-// Certification data - real certifications from resume
-const certifications = [
-  {
-    title: 'PyTorch and Deep Learning for Decision Makers (LFS116)',
-    issuer: 'The Linux Foundation',
-    date: 'Dec 2025',
-    credentialId: 'LF-d5jxp5xcoc',
-    icon: '🔥',
-    description: 'Comprehensive PyTorch course covering neural network fundamentals, deep learning architectures, and practical implementation for business decision-making.'
-  },
-  {
-    title: 'OpenAPI Fundamentals (LFEL1011)',
-    issuer: 'The Linux Foundation',
-    date: 'Jan 2026',
-    credentialId: 'LF-fq040jy0s2',
-    icon: '📚',
-    description: 'Fundamentals of OpenAPI specification and its implementation for creating robust APIs.'
-  },
-  {
-    title: 'Prompt Design in Vertex AI Skill Badge',
-    issuer: 'Google Cloud',
-    date: 'Dec 2025',
-    icon: '☁️',
-    description: 'Advanced prompt engineering techniques for Google Cloud\'s Vertex AI, including few-shot learning, chain-of-thought prompting, and model optimization.'
-  },
-  {
-    title: 'Machine Learning with Python',
-    issuer: 'freeCodeCamp',
-    date: 'Dec 2025',
-    credentialId: 'zburgers-mlwp',
-    icon: '🤖',
-    description: 'Built 5 ML projects including a Neural Network SMS Classifier and a Book Recommendation Engine using KNN algorithms.'
-  },
-  {
-    title: 'Blockchain and its Applications',
-    issuer: 'NPTEL',
-    date: 'Jan 2025',
-    icon: '⛓️',
-    description: 'Fundamentals of blockchain technology, distributed ledger systems, smart contracts, and real-world applications across industries.'
-  },
-  {
-    title: 'Responsible and Safe AI Systems',
-    issuer: 'NPTEL',
-    date: 'Nov 2025',
-    icon: '🛡️',
-    description: 'Ethics-focused certification covering AI safety, bias mitigation, responsible deployment, and governance frameworks for artificial intelligence systems.'
-  },
-  {
-    title: 'Patent Law for Engineers and Scientists',
-    issuer: 'NPTEL',
-    date: 'Jan 2026',
-    icon: '⚖️',
-    description: 'Understanding patent law principles, intellectual property rights, and legal aspects relevant to engineers and scientists.'
-  }
+const tabs: { id: PortfolioTab; label: string }[] = [
+  { id: 'overview', label: 'Profile' },
+  { id: 'work', label: 'Selected work' },
+  { id: 'focus', label: 'Toolbox' },
+  { id: 'background', label: 'Experience' },
+  { id: 'contact', label: 'Contact' },
 ];
 
-// Education Tab Component
-const EducationTab = () => {
-  const [selectedCert, setSelectedCert] = useState<typeof certifications[0] | null>(null);
-  
+function ProjectCard({ project, index, onBrowse }: {
+  project: Project;
+  index: number;
+  onBrowse: (project: Project) => void;
+}) {
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold flex items-center justify-center gap-3 mb-2">
-          <GraduationCap size={28} className="text-[var(--accent)]" />
-          Education
-        </h1>
-        <p className="text-[var(--text-secondary)]">
-          Academic background and professional certifications
-        </p>
-      </div>
-      
-      {/* B.Tech Card */}
-      <GlassCard className="mb-8 p-6" glowColor="rgba(168, 85, 247, 0.3)">
-        <div className="flex items-start gap-4">
-          <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-gradient-to-br from-[var(--accent)] to-purple-500 flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform">
-            <GraduationCap size={32} />
-          </div>
-          <div className="flex-1">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
-              <div>
-                <h2 className="text-xl font-bold">B.Tech in AI & Data Science</h2>
-                <p className="text-[var(--accent)] font-medium">Shiv Nadar University, Chennai</p>
-              </div>
-              <span className="text-sm font-medium text-[var(--accent)] bg-[var(--accent-soft)] px-3 py-1.5 rounded-full whitespace-nowrap border border-[var(--accent-border)]">
-                2022 – 2026
-              </span>
-            </div>
-            <p className="text-sm text-[var(--text-secondary)] mb-3 leading-relaxed">
-              Specializing in Artificial Intelligence and Data Science with focus on machine learning, 
-              deep learning, and cloud computing. Active participant in research projects and hackathons.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {['Machine Learning', 'Deep Learning', 'Cloud Computing', 'Data Science', 'Python', 'Research'].map((tag, i) => (
-                <span key={i} className="px-2.5 py-1 text-xs font-medium bg-[var(--surface-muted)] rounded-full hover:bg-[var(--accent-soft)] transition-colors">
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
+    <article className={`portfolio-project-card${project.image ? ' has-image' : ''}`}>
+      {project.image && (
+        <div className="portfolio-project-image">
+          <img src={project.image} alt={project.imageAlt ?? `${project.name} project preview`} loading="lazy" />
+          <span>{project.imageSource ?? 'PROJECT PREVIEW'}</span>
         </div>
-      </GlassCard>
-      
-      {/* Certifications Section */}
-      <GlassCard className="p-5" hover={false}>
-        <h3 className="flex items-center gap-2 font-semibold mb-4 text-lg">
-          <Award size={20} className="text-yellow-500" />
-          Certifications
-        </h3>
-        <p className="text-sm text-[var(--text-muted)] mb-4">
-          Click on a certification to view more details
-        </p>
-        <div className="grid grid-cols-2 gap-4">
-          {certifications.map((cert, i) => (
-            <button
-              key={i}
-              onClick={() => setSelectedCert(cert)}
-              className="group flex flex-col items-center gap-3 p-5 rounded-xl bg-[var(--surface-muted)] border border-transparent hover:border-[var(--accent-border)] hover:bg-[var(--accent-soft)] transition-all cursor-pointer text-center relative overflow-hidden"
-            >
-              {/* Glow effect */}
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-br from-[var(--accent)]/10 to-purple-500/10" />
-              <span className="text-4xl group-hover:scale-125 transition-transform relative z-10">{cert.icon}</span>
-              <div className="relative z-10">
-                <span className="block text-sm font-semibold line-clamp-2 group-hover:text-[var(--accent)] transition-colors">{cert.title}</span>
-                <span className="text-xs text-[var(--text-muted)]">{cert.issuer}</span>
-                <span className="text-xs text-[var(--accent)] block mt-1">{cert.date}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      </GlassCard>
-      
-      {/* Certification Modal */}
-      {selectedCert && (
-        <CertificationModal cert={selectedCert} onClose={() => setSelectedCert(null)} />
       )}
-    </div>
+      <div className="portfolio-project-card-copy">
+        <div className="portfolio-project-heading">
+          <span className="portfolio-project-index">{String(index + 1).padStart(2, '0')}</span>
+          <p className="portfolio-project-category">{project.category}</p>
+        </div>
+        <h3>{project.name}</h3>
+        <p className="portfolio-project-description">{project.description}</p>
+        <ul className="portfolio-tech-list" aria-label={`${project.name} technologies`}>
+          {project.techStack.map((tech) => <li key={tech}>{tech}</li>)}
+        </ul>
+        <div className="portfolio-project-actions">
+          {project.githubUrl && <a href={project.githubUrl} target="_blank" rel="noreferrer">Repository <ArrowUpRight size={14} aria-hidden="true" /></a>}
+          {project.liveUrl && <a href={project.liveUrl} target="_blank" rel="noreferrer">Live site <ArrowUpRight size={14} aria-hidden="true" /></a>}
+          {project.githubUrl && <button type="button" onClick={() => onBrowse(project)}>Browse source <TerminalSquare size={14} aria-hidden="true" /></button>}
+          {!project.githubUrl && <span className="portfolio-project-private">Self-hosted · no public repo</span>}
+        </div>
+      </div>
+    </article>
   );
-};
+}
 
-export default function Portfolio() {
+export default function Portfolio({ initialTab = 'overview' }: { initialTab?: PortfolioTab }) {
   const { openWindow } = useDesktop();
-  const [activeTab, setActiveTab] = useState<ActiveTab>('about');
+  const [activeTab, setActiveTab] = useState<PortfolioTab>(initialTab);
 
-  const handleViewCode = (project: Project) => {
-    openWindow('code-editor', `${project.name} - Code`, { 
+  useEffect(() => setActiveTab(initialTab), [initialTab]);
+
+  const browseProject = (project: Project) => {
+    if (!project.githubUrl) return;
+    openWindow('code-editor', `${project.name} · Source`, {
       githubUrl: project.githubUrl,
-      projectName: project.name
+      projectName: project.name,
     });
   };
 
-  const tabs = [
-    { id: 'about' as ActiveTab, label: 'About', icon: Users },
-    { id: 'projects' as ActiveTab, label: 'Projects', icon: Code },
-    { id: 'skills' as ActiveTab, label: 'Skills', icon: Award },
-    { id: 'experience' as ActiveTab, label: 'Experience', icon: Briefcase },
-    { id: 'education' as ActiveTab, label: 'Education', icon: GraduationCap },
-    { id: 'contact' as ActiveTab, label: 'Contact', icon: Mail },
-  ];
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'about':
-        return (
-          <div className="max-w-4xl mx-auto space-y-8">
-            {/* Hero Section with gradient */}
-            <GlassCard className="p-8" glowColor="rgba(59, 130, 246, 0.2)">
-              <div className="flex flex-col md:flex-row items-center gap-6">
-                {/* Profile Picture with animated border */}
-                <div className="flex flex-col items-center gap-3">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-[var(--accent)] to-purple-500 rounded-full animate-pulse opacity-50 blur-md" />
-                    <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-[var(--accent)] to-purple-500 p-1 shadow-xl">
-                      <img 
-                        src={PROFILE_IMAGE}
-                        alt="Nakshatra Kundlas"
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full text-xs font-medium border border-green-500/20">
-                    <Sparkles size={12} />
-                    <span>Open to Work</span>
-                  </div>
-                </div>
-                
-                {/* Name and Title */}
-                <div className="text-center md:text-left flex-1">
-                  <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-[var(--text-primary)] to-[var(--accent)] bg-clip-text text-transparent">
-                    Nakshatra Kundlas
-                  </h1>
-                  <p className="flex items-center justify-center md:justify-start gap-2 text-lg text-[var(--text-secondary)] mb-2">
-                    <Zap size={16} className="text-yellow-500" />
-                    AI Engineer & Full Stack Developer
-                  </p>
-                  <p className="flex items-center justify-center md:justify-start gap-2 text-sm text-[var(--text-muted)]">
-                    <MapPin size={14} />
-                    Delhi NCR / Chennai, India
-                  </p>
-                </div>
-              </div>
-            </GlassCard>
-            
-            {/* Bio Section */}
-            <div className="space-y-6">
-              <GlassCard className="p-6">
-                <div className="flex items-center gap-2 text-[var(--accent)] font-semibold mb-4">
-                  <Terminal size={18} />
-                  <span>About Me</span>
-                </div>
-                <div className="space-y-4 text-[var(--text-secondary)] leading-relaxed">
-                  <p>
-                    I am a final-year B.Tech student in <strong className="text-[var(--text-primary)]">Artificial Intelligence & Data Science</strong> at 
-                    Shiv Nadar University, Chennai. My journey started early—I was the kid taking apart computers 
-                    just to see how they worked (and occasionally putting them back together).
-                  </p>
-                  <p>
-                    Today, I bridge the gap between complex AI research and scalable web applications. 
-                    I specialize in building generative AI solutions, deploying cloud-native architectures, 
-                    and contributing to the open-source community.
-                  </p>
-                </div>
-              </GlassCard>
-              
-              {/* Current Focus Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <GlassCard className="p-5" glowColor="rgba(34, 197, 94, 0.2)">
-                  <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">🚀</div>
-                  <h4 className="font-semibold mb-1 group-hover:text-[var(--accent)] transition-colors">GenAI Applications</h4>
-                  <p className="text-sm text-[var(--text-muted)]">Building LLM-powered apps with Vertex AI & RAG pipelines</p>
-                </GlassCard>
-                <GlassCard className="p-5" glowColor="rgba(59, 130, 246, 0.2)">
-                  <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">☁️</div>
-                  <h4 className="font-semibold mb-1 group-hover:text-[var(--accent)] transition-colors">Cloud DevOps</h4>
-                  <p className="text-sm text-[var(--text-muted)]">GCP, Docker, Kubernetes & CI/CD automation</p>
-                </GlassCard>
-                <GlassCard className="p-5" glowColor="rgba(168, 85, 247, 0.2)">
-                  <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">💻</div>
-                  <h4 className="font-semibold mb-1 group-hover:text-[var(--accent)] transition-colors">Open Source</h4>
-                  <p className="text-sm text-[var(--text-muted)]">Active contributor at Youth Season of Code</p>
-                </GlassCard>
-              </div>
-            </div>
-            
-            {/* GitHub Stats Section */}
-            <GitHubStatsCard username={GITHUB_USERNAME} />
-          </div>
-        );
-
-      case 'projects':
-        return (
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold flex items-center justify-center gap-3 mb-2">
-                <Code size={28} className="text-[var(--accent)]" />
-                Featured Projects
-              </h1>
-              <p className="text-[var(--text-secondary)]">
-                A showcase of AI, full-stack, and open-source work
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {projects.map((project, index) => (
-                <GlassCard
-                  key={index} 
-                  className={`overflow-hidden ${project.featured ? 'ring-1 ring-[var(--accent-border)]' : ''}`}
-                  glowColor={project.featured ? 'rgba(168, 85, 247, 0.2)' : 'rgba(59, 130, 246, 0.15)'}
-                >
-                  {/* Project Image */}
-                  <div className="relative h-48 bg-gradient-to-br from-[var(--accent-soft)] to-[var(--surface-muted)] overflow-hidden">
-                    {project.image && (
-                      <img 
-                        src={project.image} 
-                        alt={project.name} 
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end justify-center pb-4 gap-3">
-                      <button
-                        onClick={() => handleViewCode(project)}
-                        className="flex items-center gap-2 px-4 py-2 bg-white/95 text-gray-900 rounded-lg font-medium text-sm hover:bg-white transition-colors shadow-lg"
-                      >
-                        <Github size={16} />
-                        Code
-                      </button>
-                    </div>
-                    {project.featured && (
-                      <div className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[var(--accent)] to-purple-500 text-white rounded-full text-xs font-medium shadow-lg">
-                        <Trophy size={12} />
-                        {project.status || 'Featured'}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Project Content */}
-                  <div className="p-5">
-                    <h3 className="font-semibold text-lg mb-2 group-hover:text-[var(--accent)] transition-colors">{project.name}</h3>
-                    <p className="text-sm text-[var(--text-secondary)] mb-4 line-clamp-2">{project.description}</p>
-                    
-                    <div className="flex flex-wrap gap-2">
-                      {project.techStack.slice(0, 4).map((tech, techIndex) => (
-                        <span 
-                          key={techIndex} 
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-[var(--surface-muted)] rounded-full hover:bg-[var(--accent-soft)] transition-colors"
-                        >
-                          {techIcons[tech] && <span>{techIcons[tech]}</span>}
-                          {tech}
-                        </span>
-                      ))}
-                      {project.techStack.length > 4 && (
-                        <span className="px-2.5 py-1 text-xs font-medium bg-[var(--accent-soft)] text-[var(--accent)] rounded-full">
-                          +{project.techStack.length - 4}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </GlassCard>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 'skills':
-        return (
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold flex items-center justify-center gap-3 mb-2">
-                <Award size={28} className="text-[var(--accent)]" />
-                Skills & Technologies
-              </h1>
-              <p className="text-[var(--text-secondary)]">
-                My technical toolkit across the full stack
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Frontend */}
-              <GlassCard className="p-5" glowColor="rgba(59, 130, 246, 0.2)">
-                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--border)]">
-                  <span className="text-2xl">⚛️</span>
-                  <h3 className="font-semibold text-lg">Frontend</h3>
-                </div>
-                <div className="space-y-4">
-                  {getSkillsByCategory('frontend').map((skill, i) => (
-                    <SkillBar 
-                      key={skill.name}
-                      name={skill.name}
-                      icon={skill.icon}
-                      proficiency={skill.proficiency}
-                      delay={i * 100}
-                    />
-                  ))}
-                </div>
-              </GlassCard>
-              
-              {/* Backend */}
-              <GlassCard className="p-5" glowColor="rgba(34, 197, 94, 0.2)">
-                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--border)]">
-                  <span className="text-2xl">🔧</span>
-                  <h3 className="font-semibold text-lg">Backend</h3>
-                </div>
-                <div className="space-y-4">
-                  {getSkillsByCategory('backend').map((skill, i) => (
-                    <SkillBar 
-                      key={skill.name}
-                      name={skill.name}
-                      icon={skill.icon}
-                      proficiency={skill.proficiency}
-                      delay={i * 100 + 200}
-                    />
-                  ))}
-                </div>
-              </GlassCard>
-              
-              {/* AI/ML */}
-              <GlassCard className="p-5" glowColor="rgba(168, 85, 247, 0.2)">
-                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--border)]">
-                  <span className="text-2xl">🤖</span>
-                  <h3 className="font-semibold text-lg">AI / Machine Learning</h3>
-                </div>
-                <div className="space-y-4">
-                  {getSkillsByCategory('ai-ml').map((skill, i) => (
-                    <SkillBar 
-                      key={skill.name}
-                      name={skill.name}
-                      icon={skill.icon}
-                      proficiency={skill.proficiency}
-                      delay={i * 100 + 400}
-                    />
-                  ))}
-                </div>
-              </GlassCard>
-              
-              {/* DevOps & Cloud */}
-              <GlassCard className="p-5" glowColor="rgba(249, 115, 22, 0.2)">
-                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--border)]">
-                  <span className="text-2xl">☁️</span>
-                  <h3 className="font-semibold text-lg">DevOps & Cloud</h3>
-                </div>
-                <div className="space-y-4">
-                  {getSkillsByCategory('cloud').map((skill, i) => (
-                    <SkillBar 
-                      key={skill.name}
-                      name={skill.name}
-                      icon={skill.icon}
-                      proficiency={skill.proficiency}
-                      delay={i * 100 + 600}
-                    />
-                  ))}
-                </div>
-              </GlassCard>
-              
-              {/* Databases */}
-              <GlassCard className="p-5" glowColor="rgba(236, 72, 153, 0.2)">
-                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--border)]">
-                  <span className="text-2xl">🗄️</span>
-                  <h3 className="font-semibold text-lg">Databases</h3>
-                </div>
-                <div className="space-y-4">
-                  {getSkillsByCategory('database').map((skill, i) => (
-                    <SkillBar 
-                      key={skill.name}
-                      name={skill.name}
-                      icon={skill.icon}
-                      proficiency={skill.proficiency}
-                      delay={i * 100 + 800}
-                    />
-                  ))}
-                </div>
-              </GlassCard>
-              
-              {/* Tools */}
-              <GlassCard className="p-5" glowColor="rgba(20, 184, 166, 0.2)">
-                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--border)]">
-                  <span className="text-2xl">🛠️</span>
-                  <h3 className="font-semibold text-lg">Tools & Others</h3>
-                </div>
-                <div className="space-y-4">
-                  {getSkillsByCategory('tools').map((skill, i) => (
-                    <SkillBar 
-                      key={skill.name}
-                      name={skill.name}
-                      icon={skill.icon}
-                      proficiency={skill.proficiency}
-                      delay={i * 100 + 1000}
-                    />
-                  ))}
-                </div>
-              </GlassCard>
-            </div>
-          </div>
-        );
-
-      case 'experience':
-        return (
-          <div className="max-w-3xl mx-auto">
-            <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold flex items-center justify-center gap-3 mb-2">
-                <Briefcase size={28} className="text-[var(--accent)]" />
-                Work Experience
-              </h1>
-              <p className="text-[var(--text-secondary)]">
-                My professional journey in tech and open source
-              </p>
-            </div>
-            
-            <div className="space-y-4">
-              <ExperienceItem 
-                type="opensource"
-                title="Open Source Developer"
-                organization="Youth Season of Code"
-                date="2025 – Present"
-                description="Selected for a global 6-month open-source program. Actively contributing to meaningful open-source projects, maintaining repositories, and managing CI/CD lifecycles with GitHub Actions."
-                tags={['Open Source', 'GitHub Actions', 'CI/CD', 'Python']}
-              />
-              
-              <ExperienceItem 
-                type="work"
-                title="Software Engineering Fellow"
-                organization="Hewlett Packard Enterprise (via Forage)"
-                date="Nov 2025"
-                description="Architected a RESTful web service using Java Spring Boot to manage employee data. Implemented unit testing protocols to validate application performance and logic."
-                tags={['Java', 'Spring Boot', 'REST APIs', 'Unit Testing']}
-              />
-              
-              <ExperienceItem 
-                type="work"
-                title="Research: Perovskite Tandem Solar Cells"
-                organization="Shiv Nadar University"
-                date="2025 – Present"
-                description="Conducting AI-driven research on optimizing Perovskite Tandem solar cell parameters to maximize efficiency. Specializing in data cleaning, feature importance analysis (SHAP), and hyperparameter optimization."
-                tags={['Machine Learning', 'SHAP', 'Optimization', 'Solar Cells', 'Python','LazyPredict']}
-              />
-            </div>
-          </div>
-        );
-
-      case 'education':
-        return <EducationTab />;
-
-      case 'contact':
-        return (
-          <div className="max-w-4xl mx-auto space-y-8 pb-8">
-            <div className="text-center mb-10">
-              <h1 className="text-3xl md:text-4xl font-bold flex items-center justify-center gap-3 mb-3">
-                <Mail size={32} className="text-[var(--accent)]" />
-                Get In Touch
-              </h1>
-              <p className="text-lg text-[var(--text-secondary)]">
-                Let's build something amazing together
-              </p>
-            </div>
-            
-            <div className="space-y-8">
-              {/* Contact Methods Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-px bg-gradient-to-r from-[var(--accent)] to-transparent" />
-                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">Contact Methods</h2>
-                  <div className="flex-1 h-px bg-gradient-to-l from-[var(--accent)] to-transparent" />
-                </div>
-              </div>
-              
-              {/* Contact Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <a href="mailto:nakshatra.kundlas@outlook.com">
-                  <GlassCard className="p-4" glowColor="rgba(59, 130, 246, 0.2)">
-                    <div className="flex items-center gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform">
-                        <Mail size={22} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold">Email</h4>
-                        <p className="text-sm text-[var(--text-secondary)] truncate">nakshatra.kundlas@outlook.com</p>
-                      </div>
-                      <ArrowRight size={18} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all" />
-                    </div>
-                  </GlassCard>
-                </a>
-                
-                <a href="https://github.com/Zburgers" target="_blank" rel="noopener noreferrer">
-                  <GlassCard className="p-4" glowColor="rgba(75, 85, 99, 0.2)">
-                    <div className="flex items-center gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform">
-                        <Github size={22} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold">GitHub</h4>
-                        <p className="text-sm text-[var(--text-secondary)]">github.com/Zburgers</p>
-                      </div>
-                      <ArrowRight size={18} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all" />
-                    </div>
-                  </GlassCard>
-                </a>
-                
-                <a href="https://www.linkedin.com/in/nakshatrakundlas/" target="_blank" rel="noopener noreferrer">
-                  <GlassCard className="p-4" glowColor="rgba(59, 130, 246, 0.2)">
-                    <div className="flex items-center gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform">
-                        <Linkedin size={22} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold">LinkedIn</h4>
-                        <p className="text-sm text-[var(--text-secondary)]">linkedin.com/in/nakshatrakundlas</p>
-                      </div>
-                      <ArrowRight size={18} className="text-[var(--text-muted)] group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all" />
-                    </div>
-                  </GlassCard>
-                </a>
-                
-                <GlassCard className="p-4" hover={false}>
-                  <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white shadow-lg">
-                      <MapPin size={22} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold">Location</h4>
-                      <p className="text-sm text-[var(--text-secondary)]">Delhi NCR / Chennai, India</p>
-                    </div>
-                  </div>
-                </GlassCard>
-              </div>
-              
-              {/* CTA Section */}
-              <div className="relative overflow-hidden rounded-3xl shadow-2xl">
-                {/* Background with multiple gradient layers for depth */}
-                <div 
-                  className="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500"
-                  style={{
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%)'
-                  }}
-                />
-                
-                {/* Animated gradient overlay for depth */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
-                
-                {/* Decorative blur orbs - positioned strategically */}
-                <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/15 rounded-full blur-3xl" />
-                <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
-                <div className="absolute top-1/2 left-1/4 w-40 h-40 bg-blue-300/20 rounded-full blur-2xl" />
-                
-                {/* Decorative grid pattern for depth */}
-                <div className="absolute inset-0 opacity-10 bg-grid-white/10" style={{
-                  backgroundImage: 'linear-gradient(0deg, transparent 24%, rgba(255,255,255,.05) 25%, rgba(255,255,255,.05) 26%, transparent 27%, transparent 74%, rgba(255,255,255,.05) 75%, rgba(255,255,255,.05) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(255,255,255,.05) 25%, rgba(255,255,255,.05) 26%, transparent 27%, transparent 74%, rgba(255,255,255,.05) 75%, rgba(255,255,255,.05) 76%, transparent 77%, transparent)',
-                  backgroundSize: '50px 50px'
-                }} />
-                
-                {/* Accent line for visual interest */}
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-                
-                {/* Main content */}
-                <div className="relative z-20 p-8 md:p-12 text-center">
-                  {/* Profile image with enhanced styling */}
-                  <div className="mb-8 flex justify-center">
-                    <div className="relative">
-                      {/* Outer glow ring */}
-                      <div className="absolute inset-0 rounded-full bg-white/20 blur-md" style={{
-                        width: '100px',
-                        height: '100px',
-                        left: '-4px',
-                        top: '-4px'
-                      }} />
-                      
-                      {/* Main image container with depth */}
-                      <div className="relative w-24 h-24 rounded-full border-4 border-white/40 shadow-2xl overflow-hidden bg-white/10 backdrop-blur-md">
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-full" />
-                        <img 
-                          src={PROFILE_IMAGE}
-                          alt="Nakshatra Kundlas"
-                          className="w-full h-full object-cover relative z-10"
-                        />
-                        {/* Shine effect */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-transparent rounded-full opacity-60" />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Heading */}
-                  <h3 className="text-3xl md:text-4xl font-bold mb-4 text-white drop-shadow-lg">
-                    Let's work together!
-                  </h3>
-                  
-                  {/* Description text - enhanced visibility */}
-                  <p className="text-white/95 mb-8 max-w-xl mx-auto text-base md:text-lg leading-relaxed drop-shadow-md font-medium">
-                    I'm always interested in new opportunities and exciting projects. 
-                    Whether you have a project in mind or want to collaborate on open source, 
-                    I'd love to hear from you!
-                  </p>
-                  
-                  {/* Button with enhanced visibility and depth */}
-                  <div className="flex justify-center">
-                    <a 
-                      href="mailto:nakshatra.kundlas@outlook.com?subject=Let's%20Collaborate!"
-                      className="inline-flex items-center justify-center gap-3 px-10 py-4 bg-white text-black font-bold rounded-2xl transition-all duration-300 hover:shadow-2xl hover:scale-110 active:scale-95 shadow-2xl border-2 border-white/40 backdrop-blur-sm group relative overflow-hidden"
-                    >
-                      {/* Button glow effect */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      
-                      {/* Button content */}
-                      <Mail size={24} className="group-hover:-translate-y-1 transition-transform duration-300" />
-                      <span className="text-lg relative z-10">Send Message</span>
-                    </a>
-                  </div>
-                  
-                  {/* Secondary CTA hint */}
-                  <p className="mt-6 text-white/70 text-sm drop-shadow-md">
-                    or reach out on my socials
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
+  const renderWork = (items: Project[] = projects) => (
+    <div className="portfolio-project-grid">
+      {items.map((project, index) => <ProjectCard key={project.name} project={project} index={index} onBrowse={browseProject} />)}
+    </div>
+  );
 
   return (
-    <div 
-      className="h-full flex flex-col overflow-hidden"
-      style={{ backgroundColor: 'var(--surface)', color: 'var(--text-primary)' }}
-    >
-      {/* Navigation Tabs */}
-      <nav 
-        className="flex-shrink-0 backdrop-blur-xl border-b"
-        style={{ 
-          borderColor: 'var(--border)',
-          background: 'linear-gradient(to right, rgba(var(--surface-rgb), 0.9), rgba(var(--surface-rgb), 0.95))'
-        }}
-      >
-        <div className="flex items-center gap-1 px-4 py-2.5 overflow-x-auto">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-                  isActive 
-                    ? 'bg-gradient-to-r from-[var(--accent)] to-purple-500 text-white shadow-lg' 
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]'
-                }`}
-              >
-                <Icon size={16} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
+    <div className="portfolio-app">
+      <nav className="portfolio-nav" aria-label="Portfolio sections">
+        <span className="portfolio-wordmark">NK<span>.</span></span>
+        <div className="portfolio-tabs">
+          {tabs.map((tab) => (
+            <button key={tab.id} type="button" aria-current={activeTab === tab.id ? 'page' : undefined} className={activeTab === tab.id ? 'is-active' : ''} onClick={() => setActiveTab(tab.id)}>
+              {tab.label}
+            </button>
+          ))}
         </div>
+        <a className="portfolio-nav-resume" href={profile.resumeUrl} target="_blank" rel="noreferrer">
+          Résumé <Download size={14} aria-hidden="true" />
+        </a>
       </nav>
 
-      {/* Content */}
-      <main className="flex-1 overflow-auto p-6">
-        {renderTabContent()}
+      <main className="portfolio-content">
+        {activeTab === 'overview' && (
+          <>
+            <section className="portfolio-overview">
+              <div className="portfolio-overview-copy">
+                <p className="portfolio-eyebrow">{profile.title} <span>·</span> {profile.location}</p>
+                <h1>The work lives<br />past <em>the demo.</em></h1>
+                <p className="portfolio-lede">{profile.summary}</p>
+                <div className="portfolio-hero-actions">
+                  <button type="button" onClick={() => setActiveTab('work')}>Explore selected work <ArrowRight size={16} aria-hidden="true" /></button>
+                  <a href={`mailto:${profile.email}`}>Start a conversation <ArrowUpRight size={15} aria-hidden="true" /></a>
+                </div>
+              </div>
+              <aside className="portfolio-overview-aside">
+                <div className="portfolio-profile-stamp"><span>PROFILE FILE</span><span>NK / 26</span></div>
+                <div className="portfolio-overview-identity">
+                  <img src={profile.avatarUrl} alt="" />
+                  <div><p className="portfolio-aside-name">{profile.name}</p><p className="portfolio-aside-location"><MapPin size={13} aria-hidden="true" /> {profile.location}</p></div>
+                </div>
+                <div className="portfolio-focus-summary"><span>Current assignment</span><p>{profile.experience[0].organization} · {profile.experience[0].role}</p></div>
+                <button className="portfolio-aside-terminal" type="button" onClick={() => openWindow('terminal', 'Terminal')}><TerminalSquare size={14} /> Open terminal <span>↵</span></button>
+              </aside>
+            </section>
+            <section className="portfolio-section-block">
+              <div className="portfolio-section-heading">
+                <div><p className="portfolio-eyebrow">Field notes / 01</p><h2>Selected work</h2></div>
+                <button type="button" onClick={() => setActiveTab('work')}>All projects <ArrowRight size={15} aria-hidden="true" /></button>
+              </div>
+              {renderWork(projects.filter((project) => project.image).slice(0, 3))}
+            </section>
+          </>
+        )}
+
+        {activeTab === 'work' && (
+          <section className="portfolio-section-block portfolio-work-page">
+            <div className="portfolio-section-heading portfolio-section-heading-start">
+              <div><p className="portfolio-eyebrow">Field notes / 02</p><h1>Selected work</h1></div>
+              <p className="portfolio-section-intro">Real screens from public repositories, with the systems behind them.</p>
+            </div>
+            {renderWork()}
+          </section>
+        )}
+
+        {activeTab === 'focus' && (
+          <section className="portfolio-split-page">
+            <div>
+              <p className="portfolio-eyebrow">Toolbox / 03</p>
+              <h1>Choose the tool that fits the constraint.</h1>
+              <p className="portfolio-lede">My work crosses product engineering, production operations, local-first software, and applied machine learning.</p>
+            </div>
+            <div className="portfolio-capability-list">
+              {profile.capabilities.map((item, index) => (
+                <article key={item.area}><span>0{index + 1}</span><div><h2>{item.area}</h2><p>{item.tools}</p></div></article>
+              ))}
+              <div className="portfolio-focus-list">
+                {profile.focus.map((item, index) => <article key={item}><span>FOCUS / 0{index + 1}</span><h2>{item}</h2></article>)}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'background' && (
+          <section className="portfolio-experience-page">
+            <header className="portfolio-experience-intro">
+              <p className="portfolio-eyebrow">Experience / 04</p>
+              <h1>Production work, open source, and the systems around them.</h1>
+              <p className="portfolio-lede">A few lines from the current résumé, translated into a readable timeline.</p>
+            </header>
+            <div className="portfolio-experience-list">
+              {profile.experience.map((role, index) => (
+                <article key={role.organization} className="portfolio-experience-item">
+                  <span className="portfolio-experience-index">0{index + 1}</span>
+                  <div className="portfolio-experience-meta"><span>{role.period}</span><span>{role.type}</span></div>
+                  <div><p className="portfolio-eyebrow">{role.organization}</p><h2>{role.role}</h2><p>{role.summary}</p></div>
+                </article>
+              ))}
+            </div>
+            <footer className="portfolio-education">
+              <span>Education · {profile.education.years}</span>
+              <div><h2>{profile.education.degree}</h2><p>{profile.education.institution}</p></div>
+            </footer>
+          </section>
+        )}
+
+        {activeTab === 'contact' && (
+          <section className="portfolio-split-page portfolio-contact-page">
+            <div>
+              <p className="portfolio-eyebrow">Contact / 05</p>
+              <h1>Have a good problem to solve?</h1>
+              <p className="portfolio-lede">Email is the best way to reach me. I’m also on GitHub, LinkedIn, and X.</p>
+              <a className="portfolio-contact-primary" href={`mailto:${profile.email}`}><Mail size={16} aria-hidden="true" /> {profile.email} <ArrowUpRight size={16} aria-hidden="true" /></a>
+            </div>
+            <nav className="portfolio-contact-links" aria-label="Contact links">
+              <a href={profile.githubUrl} target="_blank" rel="noreferrer"><Github size={18} /> GitHub <ArrowUpRight size={15} /></a>
+              <a href={profile.linkedinUrl} target="_blank" rel="noreferrer"><Linkedin size={18} /> LinkedIn <ArrowUpRight size={15} /></a>
+              <a href={profile.xUrl} target="_blank" rel="noreferrer"><span className="portfolio-x-mark">X</span> X <ArrowUpRight size={15} /></a>
+              <a href={profile.resumeUrl} target="_blank" rel="noreferrer"><Download size={18} /> Résumé <ArrowUpRight size={15} /></a>
+            </nav>
+          </section>
+        )}
       </main>
+      <footer className="portfolio-footer"><span>{profile.name}</span><span>© 2026 / PROFILE SHELL</span></footer>
     </div>
   );
 }

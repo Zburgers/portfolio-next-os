@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching file content:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch file content' },
-      { status: 500 }
+      { error: error instanceof Error ? error.message : 'Failed to fetch file content' },
+      { status: 502 }
     );
   }
 }

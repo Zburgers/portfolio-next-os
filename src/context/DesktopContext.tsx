@@ -16,7 +16,7 @@ export interface Window {
   payload?: any;
 }
 
-export type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark' | 'system';
 
 interface DesktopState {
   windows: Window[];
@@ -32,7 +32,7 @@ interface DesktopState {
 }
 
 type DesktopAction = 
-  | { type: 'OPEN_WINDOW'; appType: string; title: string; payload?: any }
+  | { type: 'OPEN_WINDOW'; appType: string; title: string; payload?: any; viewportWidth: number; viewportHeight: number }
   | { type: 'CLOSE_WINDOW'; id: number }
   | { type: 'FOCUS_WINDOW'; id: number }
   | { type: 'UPDATE_WINDOW'; id: number; updates: Partial<Window> }
@@ -63,21 +63,21 @@ interface DesktopContextType extends DesktopState {
 const DesktopContext = createContext<DesktopContextType | undefined>(undefined);
 
 const getInitialTheme = (): Theme => {
-  if (typeof window === 'undefined') return 'light';
-  
-  const savedTheme = localStorage.getItem('desktop-theme') as Theme | null;
-  if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
-    return savedTheme;
+  if (typeof window === 'undefined') return 'system';
+  try {
+    const savedTheme = localStorage.getItem('desktop-theme') as Theme | null;
+    if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system') return savedTheme;
+  } catch {
+    // Use the system preference when browser storage is unavailable.
   }
-  
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return 'system';
 };
 
 const initialState: DesktopState = {
   windows: [],
   activeWindowId: null,
   nextId: 1,
-  theme: 'light', // Will be updated in useEffect
+  theme: 'system',
   showCalendar: false,
   showControlCenter: false,
   showActivities: false,
@@ -90,15 +90,39 @@ function desktopReducer(state: DesktopState, action: DesktopAction): DesktopStat
   switch (action.type) {
     case 'OPEN_WINDOW': {
       const maxZ = state.windows.reduce((max, w) => Math.max(max, w.zIndex), 0);
-      const stackOffset = (state.nextId - 1) * 28;
+      const isDocumentApp = action.appType === 'code-editor' || action.appType === 'text-editor';
+      const existingWindow = state.windows.find((w) =>
+        w.type === action.appType && (!isDocumentApp || w.title === action.title)
+      );
+      if (existingWindow) {
+        return {
+          ...state,
+          windows: state.windows.map((w) => w.id === existingWindow.id
+            ? { ...w, zIndex: maxZ + 1, minimized: false, title: action.title, payload: action.payload ?? w.payload }
+            : w
+          ),
+          activeWindowId: existingWindow.id,
+          showCalendar: false,
+          showControlCenter: false,
+          showActivities: false,
+        };
+      }
+
+      const topBarHeight = 44;
+      const dockSpace = action.appType === 'welcome' ? 24 : 96;
+      const width = Math.min(920, Math.max(320, action.viewportWidth - 32));
+      const height = Math.min(620, Math.max(320, action.viewportHeight - topBarHeight - dockSpace));
+      const cascade = ((state.nextId - 1) % 6) * 22;
+      const maxX = Math.max(16, action.viewportWidth - width - 16);
+      const maxY = Math.max(topBarHeight + 8, action.viewportHeight - height - dockSpace);
       const newWindow: Window = {
         id: state.nextId,
         type: action.appType,
         title: action.title,
-        x: 220 + stackOffset,
-        y: 160 + stackOffset,
-        width: 920,
-        height: 620,
+        x: Math.min(Math.max(16, (action.viewportWidth - width) / 2 + cascade), maxX),
+        y: Math.min(topBarHeight + 10 + cascade, maxY),
+        width,
+        height,
         zIndex: maxZ + 1,
         minimized: false,
         maximized: false,
@@ -197,7 +221,7 @@ function desktopReducer(state: DesktopState, action: DesktopAction): DesktopStat
       return {
         ...state,
         wifiEnabled: action.enabled,
-        airplaneMode: action.enabled ? state.airplaneMode : state.airplaneMode,
+        airplaneMode: action.enabled ? false : state.airplaneMode,
       };
     }
 
@@ -205,7 +229,7 @@ function desktopReducer(state: DesktopState, action: DesktopAction): DesktopStat
       return {
         ...state,
         bluetoothEnabled: action.enabled,
-        airplaneMode: action.enabled ? state.airplaneMode : state.airplaneMode,
+        airplaneMode: action.enabled ? false : state.airplaneMode,
       };
     }
 
@@ -228,7 +252,14 @@ export function DesktopProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(desktopReducer, initialState);
 
   const openWindow = (appType: string, title: string, payload?: any) => {
-    dispatch({ type: 'OPEN_WINDOW', appType, title, payload });
+    dispatch({
+      type: 'OPEN_WINDOW',
+      appType,
+      title,
+      payload,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+    });
   };
 
   const closeWindow = (id: number) => {
@@ -245,16 +276,14 @@ export function DesktopProvider({ children }: { children: ReactNode }) {
 
   const setTheme = (theme: Theme) => {
     dispatch({ type: 'SET_THEME', theme });
-    localStorage.setItem('desktop-theme', theme);
-    
-    // Update the html element's data-theme attribute
-    if (typeof document !== 'undefined') {
-      if (theme === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      } else {
-        document.documentElement.removeAttribute('data-theme');
-      }
+    try {
+      localStorage.setItem('desktop-theme', theme);
+    } catch {
+      // Theme still applies for this browser session.
     }
+    const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+    else document.documentElement.removeAttribute('data-theme');
   };
 
   const toggleCalendar = () => {
@@ -290,6 +319,18 @@ export function DesktopProvider({ children }: { children: ReactNode }) {
     const initialTheme = getInitialTheme();
     setTheme(initialTheme);
   }, []);
+
+  useEffect(() => {
+    if (state.theme !== 'system') return;
+    const preference = window.matchMedia('(prefers-color-scheme: dark)');
+    const applyPreference = () => {
+      if (preference.matches) document.documentElement.setAttribute('data-theme', 'dark');
+      else document.documentElement.removeAttribute('data-theme');
+    };
+    applyPreference();
+    preference.addEventListener('change', applyPreference);
+    return () => preference.removeEventListener('change', applyPreference);
+  }, [state.theme]);
 
   const contextValue: DesktopContextType = {
     ...state,
