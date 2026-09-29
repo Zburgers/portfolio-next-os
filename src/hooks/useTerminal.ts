@@ -1,44 +1,107 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { projects } from '@/lib/projects';
+import { profile } from '@/lib/profile';
 
-// Terminal line types
 export interface TerminalLine {
   type: 'input' | 'output' | 'error' | 'success';
   content: string;
   timestamp?: Date;
 }
 
-// Terminal status for the Tux agent state machine
 export type TerminalStatus = 'idle' | 'processing' | 'error' | 'success' | 'panic';
 
-// Available commands for autocomplete
 export const AVAILABLE_COMMANDS = [
   'help', 'clear', 'echo', 'whoami', 'date', 'neofetch', 'projects',
   'cat', 'ls', 'pwd', 'cd', 'uname', 'uptime', 'hostname', 'history',
-  'man', 'sudo', 'exit', 'reboot', 'shutdown', 'dnf', 'open'
+  'sudo', 'open',
 ];
 
-// Terminal configuration
+const projectSlug = (name: string) => name.toLowerCase().replace(/\s+/g, '-');
+const projectDirectories = projects.map(({ name }) => projectSlug(name));
+const profileFiles = ['about.md', 'experience.md', 'links.md', 'resume.pdf'];
+const maxTerminalLines = 500;
+const maxHistoryEntries = 100;
+
+function tokenizeCommand(input: string): string[] {
+  const tokens: string[] = [];
+  const matcher = /"((?:\\.|[^"\\])*)"|'([^']*)'|(\S+)/g;
+  let match: RegExpExecArray | null;
+  while ((match = matcher.exec(input))) {
+    tokens.push(match[1] !== undefined ? match[1].replace(/\\(["\\])/g, '$1') : match[2] ?? match[3]);
+  }
+  return tokens;
+}
+
+function normalizeHomePath(input: string, currentDirectory: string, username: string): string | undefined {
+  if (!input || input === '~') return '~';
+  let relativePath: string;
+  if (input.startsWith('~/')) {
+    relativePath = input.slice(2);
+  } else if (input.startsWith('/')) {
+    const home = `/home/${username}`;
+    if (input === home || input === `${home}/`) return '~';
+    if (!input.startsWith(`${home}/`)) return undefined;
+    relativePath = input.slice(home.length + 1);
+  } else {
+    const current = currentDirectory === '~' ? '' : currentDirectory.slice(2);
+    relativePath = [current, input].filter(Boolean).join('/');
+  }
+
+  const parts: string[] = [];
+  for (const part of relativePath.split('/')) {
+    if (!part || part === '.') continue;
+    if (part === '..') parts.pop();
+    else parts.push(part);
+  }
+  return parts.length ? `~/${parts.join('/')}` : '~';
+}
+
+function isVirtualDirectory(path: string): boolean {
+  return [
+    '~', '~/profile', '~/projects', '~/profile/projects',
+    ...projectDirectories.flatMap((slug) => [`~/projects/${slug}`, `~/profile/projects/${slug}`]),
+  ].includes(path);
+}
+
+function listDirectory(path: string): string[] {
+  if (path === '~' || path === '~/profile') return [...profileFiles, 'projects/'];
+  if (path === '~/projects' || path === '~/profile/projects') return projectDirectories.map((slug) => `${slug}/`);
+  if (projectDirectories.some((slug) => path.endsWith(`/projects/${slug}`))) return ['README.md'];
+  return [];
+}
+
+function findProject(query: string) {
+  const normalized = query.toLowerCase();
+  return projects.find((project) => projectSlug(project.name) === normalized || project.name.toLowerCase() === normalized)
+    ?? projects.find((project) => project.name.toLowerCase().includes(normalized));
+}
+
+function formatElapsed(seconds: number) {
+  const total = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const remaining = total % 60;
+  return `${hours}h ${minutes}m ${remaining}s`;
+}
+
 export interface TerminalConfig {
   username?: string;
   hostname?: string;
   initialDirectory?: string;
   welcomeLines?: TerminalLine[];
   readOnly?: boolean;
+  onOpen?: (item: string) => void;
 }
 
-// Default welcome lines
-const DEFAULT_WELCOME_LINES: TerminalLine[] = [
-  { type: 'output', content: 'Fedora Linux 42 (Workstation Edition)', timestamp: new Date() },
-  { type: 'output', content: 'Kernel: Linux 6.5.6-300.fc39.x86_64', timestamp: new Date() },
+const makeWelcomeLines = (): TerminalLine[] => [
+  { type: 'output', content: 'Project Next OS', timestamp: new Date() },
   { type: 'output', content: '', timestamp: new Date() },
-  { type: 'success', content: 'Type "help" to see available commands.', timestamp: new Date() },
+  { type: 'success', content: 'Type "help" for commands.', timestamp: new Date() },
 ];
 
 export interface UseTerminalReturn {
-  // State
   lines: TerminalLine[];
   currentInput: string;
   commandHistory: string[];
@@ -46,144 +109,124 @@ export interface UseTerminalReturn {
   currentDirectory: string;
   status: TerminalStatus;
   isTyping: boolean;
-  
-  // Configuration
   username: string;
   hostname: string;
-  
-  // Core actions
   executeCommand: (command: string) => void;
   simulateTyping: (command: string, onComplete?: () => void) => void;
   setCurrentInput: (input: string) => void;
   setHistoryIndex: (index: number) => void;
-  
-  // Terminal control
   clearTerminal: () => void;
   addLine: (type: TerminalLine['type'], content: string) => void;
   addLines: (type: TerminalLine['type'], contents: string[]) => void;
-  
-  // History navigation
   navigateHistory: (direction: 'up' | 'down') => void;
-  
-  // Tab completion
-  getCompletions: (partial: string) => string[];
-  
-  // Prompt getter
+  getCompletions: (input: string) => string[];
   getPrompt: () => string;
 }
 
 export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
   const {
     username = 'nakshatra',
-    hostname = 'fedora',
+    hostname = 'next-os',
     initialDirectory = '~',
-    welcomeLines = DEFAULT_WELCOME_LINES,
+    welcomeLines,
     readOnly = false,
+    onOpen,
   } = config;
 
-  const [lines, setLines] = useState<TerminalLine[]>(welcomeLines);
+  const [lines, setLines] = useState<TerminalLine[]>(() => welcomeLines ?? makeWelcomeLines());
   const [currentInput, setCurrentInput] = useState('');
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [currentDirectory, setCurrentDirectory] = useState(initialDirectory);
   const [status, setStatus] = useState<TerminalStatus>('idle');
   const [isTyping, setIsTyping] = useState(false);
-  
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const statusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const historyDraft = useRef('');
 
-  // Add a single line
+  useEffect(() => () => {
+    if (typingTimer.current) clearTimeout(typingTimer.current);
+    if (statusTimer.current) clearTimeout(statusTimer.current);
+  }, []);
+
   const addLine = useCallback((type: TerminalLine['type'], content: string) => {
-    setLines(prev => [...prev, { type, content, timestamp: new Date() }]);
+    setLines((previous) => [...previous, { type, content, timestamp: new Date() }].slice(-maxTerminalLines));
   }, []);
 
-  // Add multiple lines
   const addLines = useCallback((type: TerminalLine['type'], contents: string[]) => {
-    setLines(prev => [
-      ...prev,
-      ...contents.map(content => ({ type, content, timestamp: new Date() }))
-    ]);
+    setLines((previous) => [
+      ...previous,
+      ...contents.map((content) => ({ type, content, timestamp: new Date() })),
+    ].slice(-maxTerminalLines));
   }, []);
 
-  // Clear terminal
   const clearTerminal = useCallback(() => {
     setLines([]);
     setStatus('idle');
   }, []);
 
-  // Execute command - the core logic
   const executeCommand = useCallback((command: string) => {
-    const trimmedCommand = command.trim();
-    
-    // Add command to history
-    if (trimmedCommand && trimmedCommand !== commandHistory[commandHistory.length - 1]) {
-      setCommandHistory(prev => [...prev, trimmedCommand]);
-    }
+    const trimmed = command.trim();
+    if (!trimmed) return;
 
-    // Add input line
-    addLine('input', `${username}@${hostname}:${currentDirectory}$ ${trimmedCommand}`);
+    const history = [...commandHistory, trimmed].slice(-maxHistoryEntries);
+    setCommandHistory(history);
+    setHistoryIndex(-1);
+    addLine('input', `${username}@${hostname}:${currentDirectory}$ ${trimmed}`);
 
-    if (!trimmedCommand) {
-      setStatus('idle');
+    const finish = (nextStatus: TerminalStatus = 'success') => {
+      if (statusTimer.current) clearTimeout(statusTimer.current);
+      setStatus('processing');
+      statusTimer.current = setTimeout(() => {
+        setStatus(nextStatus);
+        statusTimer.current = setTimeout(() => setStatus('idle'), 1400);
+      }, 80);
+    };
+
+    if (readOnly) {
+      addLine('error', 'Terminal is read-only.');
+      finish('error');
       return;
     }
 
-    setStatus('processing');
-
-    // Handle sudo prefix
-    let actualCommand = trimmedCommand;
-    let isSudo = false;
-    if (trimmedCommand.startsWith('sudo ')) {
-      isSudo = true;
-      actualCommand = trimmedCommand.slice(5).trim();
-      if (!actualCommand) {
-        addLine('error', 'usage: sudo command');
-        setStatus('error');
-        return;
-      }
+    if (trimmed === 'rm -rf /' || trimmed === 'sudo rm -rf /') {
+      addLine('error', 'rm: permission denied');
+      if (statusTimer.current) clearTimeout(statusTimer.current);
+      setStatus('panic');
+      statusTimer.current = setTimeout(() => setStatus('idle'), 1800);
+      return;
     }
 
-    const [cmd, ...args] = actualCommand.split(' ');
+    // Reject shell operators; commands are handled individually below.
+    if (/[|;&<>`]/.test(trimmed) || trimmed.includes('$(')) {
+      addLine('error', 'Unsupported shell syntax.');
+      finish('error');
+      return;
+    }
+
+    const [commandName = '', ...args] = tokenizeCommand(trimmed);
+    const commandKey = commandName.toLowerCase();
     let commandStatus: TerminalStatus = 'success';
 
-    // Check for panic commands (Easter eggs)
-    if (trimmedCommand === 'rm -rf /' || trimmedCommand === 'sudo rm -rf /') {
-      setStatus('panic');
-      addLine('error', '🚨 WOAH THERE! Nice try, but this is a simulated terminal.');
-      addLine('output', "Your system (and my dignity) remain intact. 🐧");
-      setTimeout(() => setStatus('idle'), 2000);
-      return;
-    }
-
-    switch (cmd.toLowerCase()) {
+    switch (commandKey) {
       case 'help':
-        addLine('output', '');
-        addLine('success', '📋 Available Commands:');
-        addLine('output', '');
         addLines('output', [
-          '  help              Show this help message',
-          '  clear             Clear the terminal screen',
-          '  echo <text>       Print text to terminal',
-          '  whoami            Display current user',
-          '  hostname          Display system hostname',
-          '  date              Show current date and time',
-          '  uptime            Show system uptime',
-          '  pwd               Print working directory',
-          '  ls                List directory contents',
-          '  cd <dir>          Change directory',
-          '  uname [-a]        Show system information',
-          '  neofetch          Display system info with ASCII art',
-          '  history           Show command history',
-          '  man <cmd>         Show manual for command',
+          'Commands:',
+          '  help                     Show this list',
+          '  ls [path]                List profile or project files',
+          '  cd [path]                Change directory',
+          '  pwd                      Print the current directory',
+          '  cat <file>               Read about.md, experience.md, or links.md',
+          '  cat README.md            Read the current project summary',
+          '  cat readme <project>     Read a project summary',
+          '  projects                 List projects and repository links',
+          '  open <item>              Open resume, projects, contact, or profile links',
+          '  echo <text>              Print text',
+          '  whoami, hostname, date, uptime, uname, neofetch, history, clear',
+          '  sudo <command>           Permission denied',
           '',
-          '  projects          List all portfolio projects',
-          '  cat readme <name> Show project README',
-          '  open <item>       Open resume, projects, or contact',
-          '',
-          '  dnf search <pkg>  Search for packages',
-          '  sudo <cmd>        Run command as superuser',
-          '  exit              Close terminal session',
+          'Quotes group text. Shell operators are unsupported.',
         ]);
-        addLine('output', '');
         break;
 
       case 'clear':
@@ -203,385 +246,244 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
         break;
 
       case 'pwd':
-        addLine('output', currentDirectory === '~' ? `/home/${username}` : currentDirectory);
+        addLine('output', currentDirectory === '~' ? `/home/${username}` : `/home/${username}/${currentDirectory.slice(2)}`);
         break;
 
-      case 'cd':
-        if (!args[0] || args[0] === '~') {
-          setCurrentDirectory('~');
-        } else if (args[0] === '..') {
-          if (currentDirectory !== '~' && currentDirectory !== '/') {
-            const parts = currentDirectory.split('/');
-            parts.pop();
-            setCurrentDirectory(parts.join('/') || '/');
-          }
-        } else if (args[0] === '/') {
-          setCurrentDirectory('/');
-        } else if (args[0].startsWith('/')) {
-          setCurrentDirectory(args[0]);
-        } else if (args[0] === 'Trash' || args[0] === './Trash') {
-          const newDir = currentDirectory === '~'
-            ? `~/Trash`
-            : `${currentDirectory}/Trash`;
-          setCurrentDirectory(newDir);
-        } else {
-          const newDir = currentDirectory === '~'
-            ? `~/${args[0]}`
-            : `${currentDirectory}/${args[0]}`;
-          setCurrentDirectory(newDir);
+      case 'cd': {
+        const inputPath = args.join(' ');
+        const path = normalizeHomePath(inputPath, currentDirectory, username);
+        if (path && isVirtualDirectory(path)) setCurrentDirectory(path);
+        else {
+          addLine('error', `cd: ${inputPath || '(home)'}: no such directory`);
+          commandStatus = 'error';
         }
         break;
+      }
 
-      case 'ls':
-        if (currentDirectory === '~' || currentDirectory === `/home/${username}`) {
-          addLines('output', [
-            'Desktop    Documents  Downloads  Music',
-            'Pictures   Projects   Public     Templates',
-            'Videos     .config    .local     .bashrc',
-            'Trash'
-          ]);
-        } else if (currentDirectory === '/home/nakshatra/Trash' || currentDirectory === '~/Trash') {
-          addLine('output', 'Windows11.iso');
-        } else if (currentDirectory.includes('Projects')) {
-          projects.forEach(p => {
-            addLine('output', `📁 ${p.name.replace(/\s+/g, '-').toLowerCase()}/`);
-          });
-        } else {
-          addLine('output', '.');
-          addLine('output', '..');
-        }
+      case 'ls': {
+        const requestedPath = args.find((argument) => !argument.startsWith('-'));
+        const path = requestedPath ? normalizeHomePath(requestedPath, currentDirectory, username) : currentDirectory;
+        const entries = path && isVirtualDirectory(path) ? listDirectory(path) : [];
+        if (!entries.length) {
+          addLine('error', `ls: ${requestedPath ?? currentDirectory}: no such directory`);
+          commandStatus = 'error';
+        } else addLine('output', entries.join('  '));
         break;
+      }
 
       case 'date':
         addLine('output', new Date().toString());
         break;
 
       case 'uptime':
-        const hours = Math.floor(Math.random() * 24) + 1;
-        const mins = Math.floor(Math.random() * 60);
-        addLine('output', ` ${new Date().toLocaleTimeString()}  up ${hours}:${mins.toString().padStart(2, '0')},  1 user,  load average: 0.42, 0.38, 0.35`);
+        addLine('output', `Page uptime: ${formatElapsed(performance.now() / 1000)}`);
         break;
 
       case 'uname':
-        if (args.includes('-a')) {
-          addLine('output', 'Linux fedora 6.12.0-300.fc42.x86_64 #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux');
-        } else if (args.includes('-r')) {
-          addLine('output', '6.5.6-300.fc39.x86_64');
-        } else if (args.includes('-s')) {
-          addLine('output', 'Linux');
-        } else {
-          addLine('output', 'Linux');
-        }
+        addLine('output', 'Project Next OS');
         break;
 
       case 'history':
-        if (commandHistory.length === 0) {
-          addLine('output', 'No commands in history');
-        } else {
-          commandHistory.forEach((histCmd, i) => {
-            addLine('output', ` ${(i + 1).toString().padStart(4)} ${histCmd}`);
-          });
-        }
+        addLines('output', history.map((entry, index) => `${String(index + 1).padStart(4)}  ${entry}`));
         break;
 
-      case 'man':
-        if (!args[0]) {
-          addLine('error', 'What manual page do you want?');
-          addLine('output', 'For example, try \'man ls\'');
-          commandStatus = 'error';
-        } else {
-          addLine('output', '');
-          addLine('success', `${args[0].toUpperCase()}(1)           User Commands           ${args[0].toUpperCase()}(1)`);
-          addLine('output', '');
-          addLine('output', 'NAME');
-          addLine('output', `       ${args[0]} - ${args[0] === 'ls' ? 'list directory contents' : args[0] === 'cd' ? 'change directory' : 'portfolio command'}`);
-          addLine('output', '');
-          addLine('output', 'DESCRIPTION');
-          addLine('output', `       This is a simulated man page for the ${args[0]} command.`);
-          addLine('output', '       For the full experience, visit the desktop on a larger screen.');
-          addLine('output', '');
-        }
-        break;
-
-      case 'dnf':
-        if (isSudo && args[0] === 'install') {
-          addLine('output', `Last metadata expiration check: 0:42:15 ago.`);
-          addLine('output', `Package ${args[1] || 'package'} is already installed.`);
-          addLine('output', 'Dependencies resolved.');
-          addLine('output', 'Nothing to do.');
-          addLine('success', 'Complete!');
-        } else if (args[0] === 'search' && args[1]) {
-          addLine('output', `Last metadata expiration check: 0:42:15 ago.`);
-          addLine('output', `======================== Name Matched: ${args[1]} =========================`);
-          addLine('output', `${args[1]}.x86_64 : The ${args[1]} package for Fedora`);
-          addLine('output', `${args[1]}-devel.x86_64 : Development files for ${args[1]}`);
-        } else if (args[0] === 'update' || args[0] === 'upgrade') {
-          if (!isSudo) {
-            addLine('error', 'This command has to be run with superuser privileges (under the root user on most systems).');
-            commandStatus = 'error';
-          } else {
-            addLine('output', 'Last metadata expiration check: 0:42:15 ago.');
-            addLine('output', 'Dependencies resolved.');
-            addLine('output', 'Nothing to do.');
-            addLine('success', 'Complete!');
-          }
-        } else {
-          addLine('output', 'usage: dnf [options] COMMAND');
-          addLine('output', '');
-          addLine('output', 'Commands: search, install, update, upgrade, info');
-        }
+      case 'sudo':
+        addLine('error', 'sudo: permission denied');
+        commandStatus = 'error';
         break;
 
       case 'neofetch':
         addLines('output', [
-          '             .',
-          '           .',
-          '          .',
-          '         .',
-          '        .',
-          '       .',
-          '      .',
-          '     .',
-          '       .',
-          '         .',
-          '           .',
-          '             .',
-          '           .',
-          '         .',
-          '       .',
-          '      .',
-          '     .',
-          '      .',
-          '        .',
-          '          .',
-          '            .',
-          '',
-          `\x1b[36m${username}@${hostname}\x1b[0m`,
-          '-'.repeat(username.length + hostname.length + 1),
-          `\x1b[36mOS:\x1b[0m Fedora Linux 39 (Workstation Edition) x86_64`,
-          `\x1b[36mHost:\x1b[0m ASUS ROG Strix`,
-          `\x1b[36mKernel:\x1b[0m 6.5.6-300.fc39.x86_64`,
-          `\x1b[36mUptime:\x1b[0m 2 hours, 34 mins`,
-          `\x1b[36mPackages:\x1b[0m 2847 (rpm), 42 (flatpak)`,
-          `\x1b[36mShell:\x1b[0m zsh 5.9`,
-          `\x1b[36mResolution:\x1b[0m 1920x1080, 2560x1440`,
-          `\x1b[36mDE:\x1b[0m GNOME 45.1`,
-          `\x1b[36mWM:\x1b[0m Mutter`,
-          `\x1b[36mTheme:\x1b[0m Adwaita-dark [GTK3]`,
-          `\x1b[36mIcons:\x1b[0m Adwaita [GTK3]`,
-          `\x1b[36mTerminal:\x1b[0m Portfolio Terminal`,
-          `\x1b[36mCPU:\x1b[0m Intel i7-12700H (20) @ 4.70GHz`,
-          `\x1b[36mGPU:\x1b[0m Intel Alder Lake-P GT2 [Iris Xe]`,
-          `\x1b[36mGPU:\x1b[0m NVIDIA GeForce RTX 3060 Mobile`,
-          `\x1b[36mMemory:\x1b[0m 7482MiB / 32768MiB`,
-          '',
+          `${profile.name} · Project Next OS`,
+          '────────────────────────────',
+          `Role      ${profile.title}`,
+          `Location  ${profile.location}`,
+          `Focus     ${profile.focus.join(', ')}`,
         ]);
         break;
 
       case 'projects':
-        addLine('output', '');
-        addLine('success', '📂 Portfolio Projects');
-        addLine('output', '━'.repeat(50));
-        projects.forEach((project, index) => {
-          addLine('output', '');
-          addLine('output', `${index + 1}. \x1b[1m${project.name}\x1b[0m`);
-          addLine('output', `   ${project.description}`);
-          addLine('output', `   \x1b[36mTech:\x1b[0m ${project.techStack.slice(0, 4).join(', ')}`);
-          addLine('output', `   \x1b[33mGitHub:\x1b[0m ${project.githubUrl}`);
-        });
-        addLine('output', '');
-        addLine('output', '━'.repeat(50));
-        addLine('output', 'Use "cat readme <project-name>" to view project details.');
+        addLines('output', projects.flatMap((project) => [
+          `${project.name} — ${project.description}`,
+          `  Tech: ${project.techStack.slice(0, 4).join(', ')}`,
+          ...(project.githubUrl ? [`  GitHub: ${project.githubUrl}`] : []),
+          ...(project.liveUrl ? [`  Live: ${project.liveUrl}`] : []),
+          '',
+        ]));
         break;
 
-      case 'open':
-        if (!args[0]) {
-          addLine('output', 'Usage: open <item>');
-          addLine('output', 'Items: resume, projects, contact, github');
-        } else {
-          const item = args[0].toLowerCase();
-          switch (item) {
-            case 'resume':
-            case 'resume.pdf':
-              addLine('success', '📄 Opening resume...');
-              // This will be handled by the component using the hook
-              break;
-            case 'projects':
-              addLine('success', '📂 Opening portfolio projects...');
-              break;
-            case 'contact':
-            case 'email':
-              addLine('success', '📧 Opening email client...');
-              break;
-            case 'github':
-              addLine('success', '🐙 Opening GitHub profile...');
-              break;
-            default:
-              addLine('error', `open: ${item}: not a recognized item`);
-              addLine('output', 'Try: resume, projects, contact, github');
-              commandStatus = 'error';
-          }
-        }
-        break;
-
-      case 'cat':
-        if ((args[0] === 'readme' || args[0] === 'project-readme') && args[1]) {
-          const projectName = args.slice(1).join(' ').toLowerCase();
-          const project = projects.find(p =>
-            p.name.toLowerCase().includes(projectName)
-          );
-
-          if (project) {
-            addLine('output', '');
-            addLine('success', `📄 README.md - ${project.name}`);
-            addLine('output', '═'.repeat(50));
-            addLine('output', '');
-            addLine('output', `# ${project.name}`);
-            addLine('output', '');
-            addLine('output', project.description);
-            addLine('output', '');
-            addLine('output', '## 🛠 Technologies Used');
-            project.techStack.forEach(tech => {
-              addLine('output', `  • ${tech}`);
-            });
-            addLine('output', '');
-            addLine('output', '## 🔗 Links');
-            addLine('output', `  • GitHub: ${project.githubUrl}`);
-            if (project.liveUrl) {
-              addLine('output', `  • Live Demo: ${project.liveUrl}`);
-            }
-            addLine('output', '');
-            addLine('output', '═'.repeat(50));
-          } else {
-            addLine('error', `cat: ${args.slice(1).join(' ')}: No such project`);
-            addLine('output', 'Use "projects" to list available projects.');
-            commandStatus = 'error';
-          }
-        } else if (args[0] && currentDirectory.includes('Trash') && args[0] === 'Windows11.iso') {
-          // Special handling for Windows ISO in Trash
-          addLine('output', '');
-          addLine('success', '💾 Windows11.iso (Disk Image)');
-          addLine('output', '═'.repeat(50));
-          addLine('output', '');
-          addLine('output', 'Windows 11 Installation Disk Image');
-          addLine('output', 'Size: 5.4 GB');
-          addLine('output', 'Status: Trashed');
-          addLine('output', 'Location: /home/nakshatra/Trash');
-          addLine('output', '');
-          addLine('output', 'Note: This is a Windows installation file that was moved to trash.');
-          addLine('output', 'To restore, navigate to the Files app and use the trash functionality.');
-          addLine('output', '');
-          addLine('output', '═'.repeat(50));
-        } else if (args[0]) {
-          addLine('error', `cat: ${args[0]}: No such file or directory`);
+      case 'open': {
+        const aliases: Record<string, string> = {
+          resume: 'resume', 'resume.pdf': 'resume', projects: 'projects', work: 'projects',
+          contact: 'contact', email: 'contact', github: 'github', linkedin: 'linkedin', x: 'x',
+        };
+        const item = aliases[(args[0] ?? '').toLowerCase()];
+        if (!item) {
+          addLine('error', 'Usage: open resume | projects | contact | github | linkedin | x');
           commandStatus = 'error';
         } else {
-          addLine('output', 'Usage: cat readme <project-name>');
+          onOpen?.(item);
+          addLine('success', `Opening ${item}…`);
         }
         break;
+      }
 
-      case 'exit':
-        addLine('output', 'logout');
-        addLine('output', '');
-        addLine('success', 'Session closed. Thank you for visiting!');
-        break;
+      case 'cat': {
+        const requested = args.join(' ');
+        const readmeCommand = ['readme', 'project-readme'].includes((args[0] ?? '').toLowerCase());
+        const projectQuery = args.slice(1).join(' ');
+        let project = readmeCommand && projectQuery ? findProject(projectQuery) : undefined;
+        let virtualFile: string | undefined;
+        if (!readmeCommand && requested) {
+          const path = normalizeHomePath(requested, currentDirectory, username);
+          const relativePath = path?.slice(2).replace(/^profile\//, '');
+          if (relativePath && profileFiles.includes(relativePath)) virtualFile = relativePath;
+          if (relativePath === 'profile.md') virtualFile = 'about.md';
+          if (relativePath?.endsWith('/README.md')) {
+            project = projects.find((entry) => relativePath === `projects/${projectSlug(entry.name)}/README.md` || relativePath === `profile/projects/${projectSlug(entry.name)}/README.md`);
+          }
+          if (relativePath === 'resume.pdf' && !virtualFile) virtualFile = 'resume.pdf';
+        }
 
-      case 'reboot':
-      case 'shutdown':
-        if (!isSudo) {
-          addLine('error', `${cmd}: Permission denied. Try using 'sudo ${cmd}'`);
+        if (project) {
+          addLines('output', [
+            `# ${project.name}`,
+            '',
+            project.description,
+            '',
+            `Tech: ${project.techStack.join(', ')}`,
+            ...(project.githubUrl ? [`GitHub: ${project.githubUrl}`] : []),
+            ...(project.liveUrl ? [`Live: ${project.liveUrl}`] : []),
+          ]);
+        } else if (virtualFile === 'about.md') {
+          addLines('output', [`# ${profile.name}`, profile.title, `${profile.location} · ${profile.education.institution}`, '', profile.summary, `Focus: ${profile.focus.join(' · ')}`]);
+        } else if (virtualFile === 'experience.md') {
+          addLines('output', profile.experience.flatMap((role) => [
+            `${role.role} · ${role.period}`,
+            `${role.organization} — ${role.type}`,
+            role.summary,
+            '',
+          ]));
+        } else if (virtualFile === 'links.md') {
+          addLines('output', [`GitHub   ${profile.githubUrl}`, `LinkedIn ${profile.linkedinUrl}`, `Email    ${profile.email}`, `Resume   ${profile.resumeUrl}`]);
+        } else if (virtualFile === 'resume.pdf') {
+          addLine('output', 'resume.pdf is a PDF document. Use "open resume" to view it.');
+        } else if (readmeCommand && args.length === 1) {
+          addLine('output', 'Usage: cat readme <project name or slug>');
           commandStatus = 'error';
+        } else if (!requested) {
+          addLine('output', 'Usage: cat <profile file> | cat README.md | cat readme <project>');
         } else {
-          addLine('output', `System ${cmd === 'reboot' ? 'reboot' : 'shutdown'} initiated...`);
-          addLine('success', '(This is a simulated terminal - system remains operational)');
+          addLine('error', `cat: ${requested}: no such file`);
+          commandStatus = 'error';
         }
         break;
+      }
 
-      default:
-        // Check for typos and suggest
-        const similar = AVAILABLE_COMMANDS.find(c => 
-          c.startsWith(cmd.slice(0, 2)) || 
-          c.includes(cmd)
-        );
-        
-        addLine('error', `bash: ${cmd}: command not found`);
-        if (similar) {
-          addLine('output', `Did you mean: ${similar}?`);
-        }
-        addLine('output', 'Type "help" to see available commands.');
+      default: {
+        const similar = AVAILABLE_COMMANDS.find((candidate) => candidate.startsWith(commandKey));
+        addLine('error', `${commandName}: command not found`);
+        if (similar) addLine('output', `Did you mean: ${similar}?`);
+        addLine('output', 'Type "help" for commands.');
         commandStatus = 'error';
-        break;
+      }
     }
 
-    // Set final status after a brief delay
-    setTimeout(() => {
-      setStatus(commandStatus);
-      // Reset to idle after showing status
-      setTimeout(() => setStatus('idle'), 1500);
-    }, 100);
-  }, [username, hostname, currentDirectory, commandHistory, addLine, addLines, clearTerminal]);
+    finish(commandStatus);
+  }, [addLine, addLines, clearTerminal, commandHistory, currentDirectory, hostname, onOpen, readOnly, username]);
 
-  // Simulate typing effect for the Welcome widget macros
   const simulateTyping = useCallback((command: string, onComplete?: () => void) => {
     if (isTyping) return;
-    
     setIsTyping(true);
     setStatus('processing');
-    
-    let charIndex = 0;
-    const typeChar = () => {
-      if (charIndex <= command.length) {
-        setCurrentInput(command.slice(0, charIndex));
-        charIndex++;
-        typingTimeoutRef.current = setTimeout(typeChar, 50 + Math.random() * 30);
+    let index = 0;
+    const typeNext = () => {
+      if (index <= command.length) {
+        setCurrentInput(command.slice(0, index++));
+        typingTimer.current = setTimeout(typeNext, 45);
       } else {
-        // Typing complete, execute command
-        setTimeout(() => {
+        typingTimer.current = setTimeout(() => {
           executeCommand(command);
           setCurrentInput('');
           setIsTyping(false);
           onComplete?.();
-        }, 200);
+        }, 150);
       }
     };
+    typeNext();
+  }, [executeCommand, isTyping]);
 
-    typeChar();
-  }, [isTyping, executeCommand]);
-
-  // Navigate command history
   const navigateHistory = useCallback((direction: 'up' | 'down') => {
-    if (direction === 'up') {
-      if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
-        const newIndex = historyIndex + 1;
-        setHistoryIndex(newIndex);
-        setCurrentInput(commandHistory[commandHistory.length - 1 - newIndex]);
-      }
-    } else {
-      if (historyIndex > -1) {
-        const newIndex = historyIndex - 1;
-        setHistoryIndex(newIndex);
-        if (newIndex === -1) {
-          setCurrentInput('');
-        } else {
-          setCurrentInput(commandHistory[commandHistory.length - 1 - newIndex]);
-        }
-      }
+    if (!commandHistory.length) return;
+    if (direction === 'up' && historyIndex < commandHistory.length - 1) {
+      if (historyIndex === -1) historyDraft.current = currentInput;
+      const nextIndex = historyIndex + 1;
+      setHistoryIndex(nextIndex);
+      setCurrentInput(commandHistory[commandHistory.length - 1 - nextIndex]);
+    } else if (direction === 'down' && historyIndex >= 0) {
+      const nextIndex = historyIndex - 1;
+      setHistoryIndex(nextIndex);
+      setCurrentInput(nextIndex < 0 ? historyDraft.current : commandHistory[commandHistory.length - 1 - nextIndex]);
     }
-  }, [commandHistory, historyIndex]);
+  }, [commandHistory, currentInput, historyIndex]);
 
-  // Get tab completions
-  const getCompletions = useCallback((partial: string): string[] => {
-    if (!partial) return [];
-    return AVAILABLE_COMMANDS.filter(c => c.startsWith(partial.toLowerCase()));
-  }, []);
+  const getCompletions = useCallback((input: string): string[] => {
+    const trimmed = input.trimEnd();
+    const tokens = tokenizeCommand(trimmed);
+    if (!tokens.length) return [];
+    const trailingSpace = /\s$/.test(input);
+    const commandName = tokens[0].toLowerCase();
+    if (tokens.length === 1 && !trailingSpace) {
+      return AVAILABLE_COMMANDS.filter((candidate) => candidate.startsWith(commandName));
+    }
 
-  // Get prompt string
-  const getPrompt = useCallback(() => {
-    return `${username}@${hostname}:${currentDirectory}$ `;
-  }, [username, hostname, currentDirectory]);
+    const args = tokens.slice(1);
+    const prefix = trailingSpace ? '' : args.pop() ?? '';
+    const head = trailingSpace ? input : input.slice(0, input.length - prefix.length);
+    if (commandName === 'open') {
+      if (args.length) return [];
+      return ['resume', 'projects', 'contact', 'github', 'linkedin', 'x']
+        .filter((candidate) => candidate.startsWith(prefix.toLowerCase()))
+        .map((candidate) => `${head}${candidate}`);
+    }
+    if (commandName === 'cd') {
+      if (args.length) return [];
+      let directories: string[];
+      if (prefix.startsWith('~') || prefix.startsWith('/')) {
+        directories = [
+          '~', '~/profile', '~/projects', '~/profile/projects',
+          ...projectDirectories.flatMap((slug) => [`~/projects/${slug}`, `~/profile/projects/${slug}`]),
+          `/home/${username}`,
+        ];
+      } else if (currentDirectory === '~') directories = ['..', 'profile', 'projects'];
+      else if (currentDirectory === '~/profile') directories = ['..', 'projects'];
+      else if (currentDirectory.endsWith('/projects')) directories = ['..', ...projectDirectories];
+      else directories = ['..'];
+      return directories
+        .filter((candidate) => candidate.toLowerCase().startsWith(prefix.toLowerCase()))
+        .filter((candidate) => {
+          const path = normalizeHomePath(candidate, currentDirectory, username);
+          return Boolean(path && isVirtualDirectory(path));
+        })
+        .map((candidate) => `${head}${candidate}`);
+    }
+    if (commandName === 'cat') {
+      if ((args[0]?.toLowerCase() !== 'readme' && args.length) || args.length > 1) return [];
+      let candidates = currentDirectory.endsWith('/projects')
+        ? ['readme', ...projectDirectories]
+        : currentDirectory.includes('/projects/') ? ['README.md'] : [...profileFiles, 'readme'];
+      if (args[0]?.toLowerCase() === 'readme') {
+        candidates = projectDirectories.map((slug) => `readme ${slug}`);
+        return candidates.filter((candidate) => candidate.startsWith(`readme ${prefix.toLowerCase()}`)).map((candidate) => `cat ${candidate}`);
+      }
+      return candidates.filter((candidate) => candidate.toLowerCase().startsWith(prefix.toLowerCase())).map((candidate) => `${head}${candidate}`);
+    }
+    return [];
+  }, [currentDirectory, username]);
+
+  const getPrompt = useCallback(() => `${username}@${hostname}:${currentDirectory}$ `, [username, hostname, currentDirectory]);
 
   return {
-    // State
     lines,
     currentInput,
     commandHistory,
@@ -589,29 +491,17 @@ export function useTerminal(config: TerminalConfig = {}): UseTerminalReturn {
     currentDirectory,
     status,
     isTyping,
-    
-    // Configuration
     username,
     hostname,
-    
-    // Core actions
     executeCommand,
     simulateTyping,
     setCurrentInput,
     setHistoryIndex,
-    
-    // Terminal control
     clearTerminal,
     addLine,
     addLines,
-    
-    // History navigation
     navigateHistory,
-    
-    // Tab completion
     getCompletions,
-    
-    // Prompt getter
     getPrompt,
   };
 }

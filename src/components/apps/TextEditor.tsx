@@ -6,33 +6,12 @@ import {
   Save,
   FolderOpen,
   FilePlus,
-  Undo,
-  Redo,
   Search,
-  Replace,
   Settings,
-  ZoomIn,
-  ZoomOut,
-  Type,
-  Eye,
-  EyeOff,
-  RotateCcw,
   Download,
-  Upload,
-  Copy,
-  Scissors,
-  ClipboardPaste,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Bold,
-  Italic,
-  Underline,
   List,
   Menu,
   X,
-  Check,
-  ChevronDown,
 } from 'lucide-react';
 
 interface Document {
@@ -78,16 +57,69 @@ const defaultSettings: EditorSettings = {
   tabSize: 2,
 };
 
+const draftStorageKey = (id: string) => `portfolio-text-editor:${id}`;
+const documentIndexKey = 'portfolio-text-editor:documents';
+
+function makeSearchRegex(options: FindReplaceState): RegExp {
+  const source = options.useRegex
+    ? options.findText
+    : options.findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const boundedSource = options.wholeWord ? `\\b(?:${source})\\b` : source;
+  return new RegExp(boundedSource, options.matchCase ? 'g' : 'gi');
+}
+
+function persistDraft(id: string, name: string, content: string) {
+  localStorage.setItem(draftStorageKey(id), content);
+  const stored = JSON.parse(localStorage.getItem(documentIndexKey) ?? '[]') as unknown;
+  const index = Array.isArray(stored)
+    ? stored.filter((entry): entry is { id: string; name: string } => typeof entry?.id === 'string' && typeof entry?.name === 'string')
+    : [];
+  localStorage.setItem(documentIndexKey, JSON.stringify([
+    ...index.filter((entry) => entry.id !== id),
+    { id, name },
+  ]));
+  if (id.startsWith('Home/')) {
+    window.dispatchEvent(new CustomEvent('portfolio-file-saved', { detail: { path: id } }));
+  }
+}
+
+function loadSavedDocuments(): Document[] {
+  try {
+    const index = JSON.parse(localStorage.getItem(documentIndexKey) ?? '[]') as Array<{ id?: unknown; name?: unknown }>;
+    if (!Array.isArray(index)) return [];
+    return index.flatMap((entry) => {
+      if (typeof entry?.id !== 'string' || typeof entry.name !== 'string') return [];
+      const content = localStorage.getItem(draftStorageKey(entry.id));
+      if (content === null) return [];
+      return [{
+        id: entry.id,
+        name: entry.name,
+        content,
+        lastModified: new Date(),
+        wordCount: content.trim() ? content.trim().split(/\s+/).length : 0,
+        characterCount: content.length,
+        saved: true,
+      }];
+    });
+  } catch {
+    return [];
+  }
+}
+
 const fontOptions = [
-  { value: 'var(--font-mono)', label: 'JetBrains Mono' },
-  { value: 'var(--font-sans)', label: 'Inter' },
+  { value: 'var(--font-mono)', label: 'Geist Mono' },
+  { value: 'var(--font-sans)', label: 'Geist Sans' },
   { value: '"Cascadia Code", monospace', label: 'Cascadia Code' },
   { value: '"SF Mono", monospace', label: 'SF Mono' },
   { value: '"Fira Code", monospace', label: 'Fira Code' },
   { value: '"Courier New", monospace', label: 'Courier New' },
 ];
 
-export default function TextEditor() {
+export default function TextEditor({ initialFileName, initialFilePath, initialContent }: {
+  initialFileName?: string;
+  initialFilePath?: string;
+  initialContent?: string;
+}) {
   // Core state
   const [documents, setDocuments] = useState<Document[]>([]);
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
@@ -105,6 +137,7 @@ export default function TextEditor() {
   const [showSettings, setShowSettings] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [cursor, setCursor] = useState({ line: 1, column: 1 });
   
   // Editor refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -113,53 +146,41 @@ export default function TextEditor() {
   // Get active document
   const activeDocument = documents.find(doc => doc.id === activeDocumentId);
 
-  // Initialize with welcome document
+  // Open the requested file, restoring its local draft when one exists.
   useEffect(() => {
+    const id = initialFilePath || initialFileName || 'welcome';
+    const name = initialFileName || 'Welcome.md';
+    const defaultContent = initialFileName
+      ? initialContent || ''
+      : '';
+    let content = defaultContent;
+    let hasSavedDraft = false;
+    try {
+      const savedDraft = localStorage.getItem(draftStorageKey(id));
+      if (savedDraft !== null) {
+        content = savedDraft;
+        hasSavedDraft = true;
+      }
+    } catch {
+      // Browser storage may be disabled; the editor still works in memory.
+    }
     const welcomeDoc: Document = {
-      id: 'welcome',
-      name: 'Welcome.md',
-      content: `# Welcome to Text Editor
-
-This is a fully-featured text editor built into the Fedora desktop environment.
-
-## Features
-
-- **Multi-document support** - Open and edit multiple files
-- **Advanced find & replace** - With regex and case-sensitive options
-- **Customizable interface** - Adjust fonts, themes, and layout
-- **Real-time statistics** - Track word count, character count, and line numbers
-- **Auto-save functionality** - Never lose your work
-- **File management** - Import and export documents
-
-## Getting Started
-
-1. Start typing to begin editing this document
-2. Use Ctrl+N to create a new document
-3. Use Ctrl+O to open existing files
-4. Use Ctrl+S to save your work
-5. Access settings via the gear icon
-
-## Keyboard Shortcuts
-
-- **Ctrl+N** - New document
-- **Ctrl+O** - Open file
-- **Ctrl+S** - Save document
-- **Ctrl+F** - Find & replace
-- **Ctrl+Z** - Undo
-- **Ctrl+Y** - Redo
-- **Ctrl++** - Zoom in
-- **Ctrl+-** - Zoom out
-
-Happy writing!`,
+      id,
+      name,
+      content,
       lastModified: new Date(),
-      wordCount: 0,
-      characterCount: 0,
-      saved: true,
+      wordCount: content.trim() ? content.trim().split(/\s+/).length : 0,
+      characterCount: content.length,
+      saved: hasSavedDraft,
     };
 
-    setDocuments([welcomeDoc]);
+    setDocuments((previous) => {
+      const restored = previous.length ? previous : loadSavedDocuments();
+      const current = restored.find((doc) => doc.id === id);
+      return current ? restored : [...restored, welcomeDoc];
+    });
     setActiveDocumentId(welcomeDoc.id);
-  }, []);
+  }, [initialFileName, initialFilePath, initialContent]);
 
   // Calculate statistics
   const calculateStats = useCallback((content: string) => {
@@ -186,18 +207,18 @@ Happy writing!`,
         : doc
     ));
 
-    // Auto-save after 2 seconds of inactivity
-    if (settings.autoSave) {
-      setTimeout(() => {
-        saveDocument();
-      }, 2000);
-    }
-  }, [activeDocumentId, settings.autoSave, calculateStats]);
+  }, [activeDocumentId, calculateStats]);
+
+  const setCursorPosition = (position: number, content = activeDocument?.content ?? '') => {
+    const beforeCursor = content.slice(0, position);
+    const lines = beforeCursor.split('\n');
+    setCursor({ line: lines.length, column: lines[lines.length - 1].length + 1 });
+  };
 
   // Document operations
   const createNewDocument = () => {
     const newDoc: Document = {
-      id: `doc-${Date.now()}`,
+      id: `local/Untitled-${Date.now()}.txt`,
       name: 'Untitled.txt',
       content: '',
       lastModified: new Date(),
@@ -211,8 +232,15 @@ Happy writing!`,
     setStatusMessage('New document created');
   };
 
-  const saveDocument = () => {
+  const saveDocument = useCallback(() => {
     if (!activeDocument) return;
+
+    try {
+      persistDraft(activeDocument.id, activeDocument.name, activeDocument.content);
+    } catch {
+      setStatusMessage('Save failed. Download a copy.');
+      return;
+    }
 
     setDocuments(prev => prev.map(doc => 
       doc.id === activeDocumentId 
@@ -222,20 +250,46 @@ Happy writing!`,
 
     setStatusMessage(`Saved: ${activeDocument.name}`);
     setTimeout(() => setStatusMessage(''), 3000);
-  };
+  }, [activeDocument, activeDocumentId]);
+
+  useEffect(() => {
+    if (!settings.autoSave || !activeDocument || activeDocument.saved) return;
+    const timeout = window.setTimeout(() => {
+      try {
+        persistDraft(activeDocument.id, activeDocument.name, activeDocument.content);
+        setDocuments(prev => prev.map(doc => doc.id === activeDocument.id ? { ...doc, saved: true } : doc));
+      } catch {
+        setStatusMessage('Save failed. Download a copy.');
+      }
+    }, 900);
+    return () => window.clearTimeout(timeout);
+  }, [activeDocument?.id, activeDocument?.name, activeDocument?.content, activeDocument?.saved, settings.autoSave]);
 
   const renameDocument = (newName: string) => {
     if (!activeDocumentId || !newName.trim()) return;
 
     setDocuments(prev => prev.map(doc => 
       doc.id === activeDocumentId 
-        ? { ...doc, name: newName.trim() }
+        ? { ...doc, name: newName.trim(), saved: false }
         : doc
     ));
   };
 
   const closeDocument = (docId: string) => {
     if (documents.length === 1) return; // Don't close the last document
+
+    const closing = documents.find((doc) => doc.id === docId);
+    if (closing && !closing.saved) {
+      if (settings.autoSave) {
+        try {
+          persistDraft(closing.id, closing.name, closing.content);
+        } catch {
+          if (!window.confirm(`${closing.name} could not be saved. Close and lose the unsaved changes?`)) return;
+        }
+      } else if (!window.confirm(`Discard unsaved changes to ${closing.name}?`)) {
+        return;
+      }
+    }
 
     setDocuments(prev => prev.filter(doc => doc.id !== docId));
     
@@ -252,21 +306,39 @@ Happy writing!`,
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const content = e.target?.result as string;
+      const source = e.target?.result;
+      if (typeof source !== 'string') {
+        setStatusMessage(`Could not read ${file.name} as text`);
+        return;
+      }
+      const id = `Imported/${file.name}`;
+      let content = source;
+      let hasSavedDraft = false;
+      try {
+        const savedDraft = localStorage.getItem(draftStorageKey(id));
+        if (savedDraft !== null) {
+          content = savedDraft;
+          hasSavedDraft = true;
+        }
+      } catch {
+        // Keep the selected file content in memory when storage is unavailable.
+      }
       const newDoc: Document = {
-        id: `file-${Date.now()}`,
+        id,
         name: file.name,
         content,
         lastModified: new Date(),
         ...calculateStats(content),
-        saved: true,
+        saved: hasSavedDraft,
       };
 
-      setDocuments(prev => [...prev, newDoc]);
+      setDocuments(prev => [...prev.filter((doc) => doc.id !== id), newDoc]);
       setActiveDocumentId(newDoc.id);
       setStatusMessage(`Opened: ${file.name}`);
     };
+    reader.onerror = () => setStatusMessage(`Could not read ${file.name}`);
     reader.readAsText(file);
+    event.target.value = '';
   };
 
   const downloadDocument = () => {
@@ -278,96 +350,68 @@ Happy writing!`,
     a.href = url;
     a.download = activeDocument.name;
     a.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     setStatusMessage(`Downloaded: ${activeDocument.name}`);
   };
 
   // Find and replace functionality
   const performFind = () => {
-    if (!textareaRef.current || !findReplace.findText) return;
-
     const textarea = textareaRef.current;
-    const text = textarea.value;
-    const searchText = findReplace.findText;
-    
-    let flags = 'g';
-    if (!findReplace.matchCase) flags += 'i';
-    
-    const regex = findReplace.useRegex 
-      ? new RegExp(searchText, flags)
-      : new RegExp(searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
-    
-    const matches = Array.from(text.matchAll(regex));
-    if (matches.length > 0) {
-      const firstMatch = matches[0];
-      textarea.setSelectionRange(firstMatch.index!, firstMatch.index! + firstMatch[0].length);
+    if (!textarea || !activeDocument || !findReplace.findText) return;
+
+    try {
+      const matches = Array.from(activeDocument.content.matchAll(makeSearchRegex(findReplace)));
+      const match = matches.find((candidate) => (candidate.index ?? 0) >= textarea.selectionEnd) ?? matches[0];
+      if (!match) {
+        setStatusMessage('No matches found');
+        return;
+      }
+      const start = match.index ?? 0;
+      textarea.setSelectionRange(start, start + match[0].length);
       textarea.focus();
-      setStatusMessage(`Found ${matches.length} matches`);
-    } else {
-      setStatusMessage('No matches found');
+      setCursorPosition(start + match[0].length, activeDocument.content);
+      setStatusMessage(`Match ${matches.indexOf(match) + 1} of ${matches.length}`);
+    } catch {
+      setStatusMessage('Invalid regular expression');
     }
   };
 
   const performReplace = () => {
-    if (!textareaRef.current || !findReplace.findText) return;
-
-    const textarea = textareaRef.current;
-    const text = textarea.value;
-    
-    let flags = 'g';
-    if (!findReplace.matchCase) flags += 'i';
-    
-    const regex = findReplace.useRegex 
-      ? new RegExp(findReplace.findText, flags)
-      : new RegExp(findReplace.findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
-    
-    const newText = text.replace(regex, findReplace.replaceText);
-    updateDocumentContent(newText);
-    
-    if (textareaRef.current) {
-      textareaRef.current.value = newText;
+    if (!activeDocument || !findReplace.findText) return;
+    try {
+      const regex = makeSearchRegex(findReplace);
+      const matches = Array.from(activeDocument.content.matchAll(regex)).length;
+      if (!matches) {
+        setStatusMessage('No matches found');
+        return;
+      }
+      updateDocumentContent(activeDocument.content.replace(regex, findReplace.replaceText));
+      setStatusMessage(`Replaced ${matches} ${matches === 1 ? 'match' : 'matches'}`);
+    } catch {
+      setStatusMessage('Invalid regular expression');
     }
-    
-    setStatusMessage('Text replaced');
   };
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        switch (e.key) {
-          case 'n':
-            e.preventDefault();
-            createNewDocument();
-            break;
-          case 's':
-            e.preventDefault();
-            saveDocument();
-            break;
-          case 'o':
-            e.preventDefault();
-            fileInputRef.current?.click();
-            break;
-          case 'f':
-            e.preventDefault();
-            setFindReplace(prev => ({ ...prev, isOpen: !prev.isOpen }));
-            break;
-          case '=':
-          case '+':
-            e.preventDefault();
-            setSettings(prev => ({ ...prev, fontSize: Math.min(prev.fontSize + 1, 24) }));
-            break;
-          case '-':
-            e.preventDefault();
-            setSettings(prev => ({ ...prev, fontSize: Math.max(prev.fontSize - 1, 8) }));
-            break;
-        }
-      }
-    };
+  function handleAppKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (!event.ctrlKey && !event.metaKey) return;
+    switch (event.key.toLowerCase()) {
+      case 'n': event.preventDefault(); createNewDocument(); break;
+      case 's': event.preventDefault(); saveDocument(); break;
+      case 'o': event.preventDefault(); fileInputRef.current?.click(); break;
+      case 'f': event.preventDefault(); setFindReplace((previous) => ({ ...previous, isOpen: !previous.isOpen })); break;
+      case '=': case '+': event.preventDefault(); setSettings((previous) => ({ ...previous, fontSize: Math.min(previous.fontSize + 1, 24) })); break;
+      case '-': event.preventDefault(); setSettings((previous) => ({ ...previous, fontSize: Math.max(previous.fontSize - 1, 8) })); break;
+    }
+  }
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  function handleEditorKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== 'Tab' || event.shiftKey) return;
+    event.preventDefault();
+    const textarea = event.currentTarget;
+    textarea.setRangeText(' '.repeat(settings.tabSize), textarea.selectionStart, textarea.selectionEnd, 'end');
+    updateDocumentContent(textarea.value);
+    setCursorPosition(textarea.selectionStart, textarea.value);
+  }
 
   // Auto-update stats when content changes
   useEffect(() => {
@@ -401,7 +445,7 @@ Happy writing!`,
   }
 
   return (
-    <div className="h-full bg-surface flex flex-col overflow-hidden">
+    <div className="h-full bg-surface flex flex-col overflow-hidden" onKeyDown={handleAppKeyDown}>
       {/* Toolbar */}
       <div className="flex-shrink-0 border-b border-color bg-surface-muted px-md py-sm">
         <div className="flex items-center justify-between">
@@ -411,6 +455,7 @@ Happy writing!`,
               onClick={createNewDocument}
               className="btn-icon"
               title="New document (Ctrl+N)"
+              aria-label="New document"
             >
               <FilePlus className="h-4 w-4" />
             </button>
@@ -418,7 +463,7 @@ Happy writing!`,
             <input
               ref={fileInputRef}
               type="file"
-              accept=".txt,.md,.json,.csv,.xml,.html,.css,.js,.ts,.py,.java,.cpp,.c,.h,.php,.rb,.go,.rs,.swift"
+              accept=".txt,.md,.markdown,.json,.csv,.xml,.yaml,.yml,.log,.conf,.config,.ini,.env,.toml,.sql,.html,.css,.js,.jsx,.ts,.tsx,.py,.java,.cpp,.c,.h,.php,.rb,.go,.rs,.swift,.kt,.scala,.vue,.svelte,.sh"
               onChange={handleFileOpen}
               className="hidden"
             />
@@ -426,6 +471,7 @@ Happy writing!`,
               onClick={() => fileInputRef.current?.click()}
               className="btn-icon"
               title="Open file (Ctrl+O)"
+              aria-label="Open file"
             >
               <FolderOpen className="h-4 w-4" />
             </button>
@@ -434,6 +480,7 @@ Happy writing!`,
               onClick={saveDocument}
               className="btn-icon"
               title="Save document (Ctrl+S)"
+              aria-label="Save document"
             >
               <Save className="h-4 w-4" />
             </button>
@@ -442,6 +489,7 @@ Happy writing!`,
               onClick={downloadDocument}
               className="btn-icon"
               title="Download document"
+              aria-label="Download document"
             >
               <Download className="h-4 w-4" />
             </button>
@@ -453,6 +501,7 @@ Happy writing!`,
               onClick={() => setFindReplace(prev => ({ ...prev, isOpen: !prev.isOpen }))}
               className="btn-icon"
               title="Find & Replace (Ctrl+F)"
+              aria-label="Find and replace"
             >
               <Search className="h-4 w-4" />
             </button>
@@ -464,6 +513,7 @@ Happy writing!`,
               onClick={() => setSidebarVisible(!sidebarVisible)}
               className="btn-icon"
               title="Toggle sidebar"
+              aria-label="Toggle document list"
             >
               <Menu className="h-4 w-4" />
             </button>
@@ -472,6 +522,8 @@ Happy writing!`,
               onClick={() => setSettings(prev => ({ ...prev, showLineNumbers: !prev.showLineNumbers }))}
               className={`btn-icon ${settings.showLineNumbers ? 'bg-accent-soft text-accent' : ''}`}
               title="Toggle line numbers"
+              aria-label="Toggle line numbers"
+              aria-pressed={settings.showLineNumbers}
             >
               <List className="h-4 w-4" />
             </button>
@@ -480,6 +532,7 @@ Happy writing!`,
               onClick={() => setShowSettings(!showSettings)}
               className="btn-icon"
               title="Settings"
+              aria-label="Editor settings"
             >
               <Settings className="h-4 w-4" />
             </button>
@@ -491,10 +544,11 @@ Happy writing!`,
               type="text"
               value={activeDocument.name}
               onChange={(e) => renameDocument(e.target.value)}
+              aria-label="Document name"
               className="bg-transparent border-none outline-none text-text-primary font-medium min-w-0 max-w-48"
             />
             <span className={`px-sm py-xs rounded text-xs ${activeDocument.saved ? 'text-success' : 'text-warning'}`}>
-              {activeDocument.saved ? '●' : '●'} {activeDocument.saved ? 'Saved' : 'Modified'}
+              {activeDocument.saved ? 'Saved' : 'Unsaved changes'}
             </span>
           </div>
         </div>
@@ -510,6 +564,8 @@ Happy writing!`,
                 placeholder="Find..."
                 value={findReplace.findText}
                 onChange={(e) => setFindReplace(prev => ({ ...prev, findText: e.target.value }))}
+                aria-label="Find text"
+                onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); performFind(); } }}
                 className="flex-1 px-sm py-xs border border-color rounded-md bg-surface"
               />
               <input
@@ -517,6 +573,7 @@ Happy writing!`,
                 placeholder="Replace..."
                 value={findReplace.replaceText}
                 onChange={(e) => setFindReplace(prev => ({ ...prev, replaceText: e.target.value }))}
+                aria-label="Replace with"
                 className="flex-1 px-sm py-xs border border-color rounded-md bg-surface"
               />
             </div>
@@ -583,15 +640,16 @@ Happy writing!`,
                         ? 'bg-accent-soft text-accent' 
                         : 'hover:bg-surface-hover'
                     }`}
-                    onClick={() => setActiveDocumentId(doc.id)}
                   >
-                    <div className="flex items-center gap-xs min-w-0">
+                    <button type="button" onClick={() => setActiveDocumentId(doc.id)} aria-current={doc.id === activeDocumentId ? 'page' : undefined} className="flex min-w-0 flex-1 items-center gap-xs text-left">
                       <FileText className="h-4 w-4 flex-shrink-0" />
                       <span className="truncate text-sm">{doc.name}</span>
-                      {!doc.saved && <span className="text-warning">●</span>}
-                    </div>
+                      {!doc.saved && <span className="text-warning" aria-label="Unsaved">●</span>}
+                    </button>
                     {documents.length > 1 && (
                       <button
+                        type="button"
+                        aria-label={`Close ${doc.name}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           closeDocument(doc.id);
@@ -642,6 +700,7 @@ Happy writing!`,
                   <button 
                     onClick={() => setShowSettings(false)}
                     className="btn-icon"
+                    aria-label="Close editor settings"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -650,8 +709,9 @@ Happy writing!`,
                 <div className="space-y-lg">
                   {/* Font settings */}
                   <div>
-                    <label className="block text-sm font-medium mb-sm">Font Family</label>
+                    <label htmlFor="editor-font-family" className="block text-sm font-medium mb-sm">Font Family</label>
                     <select
+                      id="editor-font-family"
                       value={settings.fontFamily}
                       onChange={(e) => setSettings(prev => ({ ...prev, fontFamily: e.target.value }))}
                       className="w-full px-sm py-xs border border-color rounded-md bg-surface"
@@ -665,10 +725,11 @@ Happy writing!`,
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium mb-sm">
+                    <label htmlFor="editor-font-size" className="block text-sm font-medium mb-sm">
                       Font Size: {settings.fontSize}px
                     </label>
                     <input
+                      id="editor-font-size"
                       type="range"
                       min="8"
                       max="24"
@@ -679,10 +740,11 @@ Happy writing!`,
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium mb-sm">
+                    <label htmlFor="editor-line-height" className="block text-sm font-medium mb-sm">
                       Line Height: {settings.lineHeight}
                     </label>
                     <input
+                      id="editor-line-height"
                       type="range"
                       min="1.2"
                       max="2.0"
@@ -745,13 +807,18 @@ Happy writing!`,
             <textarea
               ref={textareaRef}
               value={activeDocument.content}
-              onChange={(e) => updateDocumentContent(e.target.value)}
-              className="flex-1 p-md resize-none outline-none bg-surface text-text-primary custom-scrollbar"
+              onChange={(e) => { updateDocumentContent(e.target.value); setCursorPosition(e.target.selectionStart, e.target.value); }}
+              onSelect={(e) => setCursorPosition(e.currentTarget.selectionStart, e.currentTarget.value)}
+              onKeyDown={handleEditorKeyDown}
+              aria-label={`${activeDocument.name} contents`}
+              wrap={settings.wordWrap ? 'soft' : 'off'}
+              className="flex-1 min-w-0 p-md resize-none outline-none bg-surface text-text-primary custom-scrollbar"
               style={{
                 fontFamily: settings.fontFamily,
                 fontSize: `${settings.fontSize}px`,
                 lineHeight: settings.lineHeight,
                 whiteSpace: settings.wordWrap ? 'pre-wrap' : 'pre',
+                overflowWrap: settings.wordWrap ? 'anywhere' : 'normal',
                 tabSize: settings.tabSize,
               }}
               placeholder="Start typing..."
@@ -765,8 +832,8 @@ Happy writing!`,
       <div className="flex-shrink-0 border-t border-color bg-surface-muted px-md py-xs">
         <div className="flex items-center justify-between text-sm text-text-secondary">
           <div className="flex items-center gap-lg">
-            <span>Line {activeDocument.content.split('\n').length}</span>
-            <span>Column 1</span>
+            <span>Line {cursor.line}</span>
+            <span>Column {cursor.column}</span>
             <span>{settings.fontSize}px</span>
             {statusMessage && <span className="text-accent">{statusMessage}</span>}
           </div>

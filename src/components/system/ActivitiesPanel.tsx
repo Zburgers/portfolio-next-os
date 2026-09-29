@@ -11,6 +11,7 @@ import {
   Image as ImageIcon,
   Monitor,
   FileText,
+  Trash2,
 } from 'lucide-react';
 import { useDesktop } from '@/context/DesktopContext';
 
@@ -69,7 +70,7 @@ const apps: App[] = [
     icon: { type: 'image', src: '/dock/files.svg', alt: 'Files' },
     appType: 'files',
     title: 'Files',
-    description: 'Browse your folders',
+    description: 'Browse the local portfolio workspace',
   },
   {
     id: 'portfolio',
@@ -89,7 +90,7 @@ const apps: App[] = [
     },
     appType: 'terminal',
     title: 'Terminal',
-    description: 'Command line access',
+    description: 'Run commands',
   },
   {
     id: 'code',
@@ -97,7 +98,7 @@ const apps: App[] = [
     icon: { type: 'image', src: '/dock/code.svg', alt: 'Code Editor' },
     appType: 'code-editor',
     title: 'Code Editor',
-    description: 'Edit your source files',
+    description: 'Browse public GitHub source code',
   },
   {
     id: 'text-editor',
@@ -133,8 +134,20 @@ const apps: App[] = [
     },
     appType: 'system-monitor',
     title: 'System Monitor',
-    description: 'Performance monitoring',
-  }
+    description: 'Session status',
+  },
+  {
+    id: 'trash',
+    name: 'Trash',
+    icon: {
+      type: 'gradient',
+      gradient: 'from-slate-500 via-slate-600 to-slate-700',
+      glyph: <Trash2 className="h-7 w-7" strokeWidth={1.5} />,
+    },
+    appType: 'trash',
+    title: 'Trash',
+    description: 'Review items moved to the local trash',
+  },
 ];
 
 const workspaceGradients = [
@@ -149,7 +162,7 @@ interface ActivitiesPanelProps {
 }
 
 export default function ActivitiesPanel({ isVisible }: ActivitiesPanelProps) {
-  const { windows, openWindow, focusWindow, updateWindow, closePanels } = useDesktop();
+  const { windows, activeWindowId, openWindow, focusWindow, updateWindow, closePanels } = useDesktop();
   const [searchQuery, setSearchQuery] = useState('');
   const [now, setNow] = useState<Date>(() => new Date());
 
@@ -174,7 +187,9 @@ export default function ActivitiesPanel({ isVisible }: ActivitiesPanelProps) {
   );
 
   const handleAppClick = (app: App) => {
-    const existingWindow = windows.find((w) => w.type === app.appType);
+    const existingWindow = windows
+      .filter((window) => window.type === app.appType)
+      .sort((a, b) => Number(b.id === activeWindowId) - Number(a.id === activeWindowId) || Number(a.minimized) - Number(b.minimized) || b.zIndex - a.zIndex)[0];
 
     if (existingWindow) {
       if (existingWindow.minimized) {

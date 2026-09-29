@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Bell, BellOff } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { useDesktop } from '@/context/DesktopContext';
 
 interface CalendarPanelProps {
@@ -12,11 +12,29 @@ export default function CalendarPanel({ isVisible }: CalendarPanelProps) {
   const { closePanels } = useDesktop();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [doNotDisturb, setDoNotDisturb] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+  const [reminders, setReminders] = useState<Array<{ id: string; date: string; title: string }>>([]);
+  const [draftReminder, setDraftReminder] = useState('');
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 30_000);
+    try {
+      const stored = localStorage.getItem('portfolio-os-calendar-reminders');
+      const parsed: unknown = stored ? JSON.parse(stored) : [];
+      if (Array.isArray(parsed)) {
+        setReminders(parsed.filter((item): item is { id: string; date: string; title: string } =>
+          typeof item?.id === 'string' && typeof item?.date === 'string' && typeof item?.title === 'string'
+        ));
+      }
+    } catch {
+      setReminders([]);
+    }
+    return () => window.clearInterval(timer);
+  }, []);
 
   if (!isVisible) return null;
 
-  const today = new Date();
+  const today = now;
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
@@ -42,6 +60,27 @@ export default function CalendarPanel({ isVisible }: CalendarPanelProps) {
 
   const handleDateClick = (day: number) => {
     setSelectedDate(new Date(year, month, day));
+  };
+
+  const localDateKey = (date: Date) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+  const selectedDateKey = localDateKey(selectedDate);
+  const selectedReminders = useMemo(() => reminders.filter((item) => item.date === selectedDateKey), [reminders, selectedDateKey]);
+
+  const saveReminders = (next: typeof reminders) => {
+    setReminders(next);
+    try {
+      localStorage.setItem('portfolio-os-calendar-reminders', JSON.stringify(next));
+    } catch {
+      // Reminders remain available for this session if browser storage is blocked.
+    }
+  };
+
+  const addReminder = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const title = draftReminder.trim();
+    if (!title) return;
+    saveReminders([...reminders, { id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()), date: selectedDateKey, title }]);
+    setDraftReminder('');
   };
 
   // Get week number for a given date
@@ -116,6 +155,10 @@ export default function CalendarPanel({ isVisible }: CalendarPanelProps) {
             <button
               key={day}
               onClick={() => handleDateClick(day)}
+              type="button"
+              aria-label={new Date(year, month, day).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+              aria-pressed={isSelected}
+              aria-current={isToday ? 'date' : undefined}
               className={`calendar-day ${isToday ? 'calendar-day-today' : ''} ${isSelected && !isToday ? 'calendar-day-selected' : ''}`}
             >
               {day}
@@ -169,7 +212,7 @@ export default function CalendarPanel({ isVisible }: CalendarPanelProps) {
           <div className="calendar-widget">
             {/* Month Navigation */}
             <div className="calendar-month-nav">
-              <button onClick={goToPreviousMonth} className="calendar-nav-btn">
+                <button type="button" onClick={goToPreviousMonth} aria-label="Previous month" className="calendar-nav-btn">
                 <ChevronLeft className="w-4 h-4" />
               </button>
               
@@ -177,7 +220,7 @@ export default function CalendarPanel({ isVisible }: CalendarPanelProps) {
                 {monthNames[month]}
               </div>
               
-              <button onClick={goToNextMonth} className="calendar-nav-btn">
+              <button type="button" onClick={goToNextMonth} aria-label="Next month" className="calendar-nav-btn">
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -198,34 +241,26 @@ export default function CalendarPanel({ isVisible }: CalendarPanelProps) {
             </div>
           </div>
 
-          {/* Events Section */}
           <div className="calendar-events-section">
-            <div className="calendar-events-header">Today</div>
-            <div className="calendar-no-events">No events scheduled</div>
-          </div>
-
-          {/* Notifications Section */}
-          <div className="calendar-notifications">
-            <div className="notifications-empty-state">
-              <Bell className="w-10 h-10 text-muted opacity-40" />
-              <span className="text-sm text-muted">No Notifications</span>
-            </div>
-          </div>
-
-          {/* Do Not Disturb Toggle */}
-          <div className="calendar-dnd">
-            <div className="dnd-row">
-              <div className="dnd-label">
-                {doNotDisturb ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
-                <span>Do Not Disturb</span>
-              </div>
-              <button
-                onClick={() => setDoNotDisturb(!doNotDisturb)}
-                className={`dnd-toggle-switch ${doNotDisturb ? 'dnd-toggle-active' : ''}`}
-              >
-                <div className="dnd-toggle-thumb"></div>
-              </button>
-            </div>
+            <div className="calendar-events-header">{selectedDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}</div>
+            <form className="calendar-reminder-form" onSubmit={addReminder}>
+              <input
+                value={draftReminder}
+                onChange={(event) => setDraftReminder(event.target.value)}
+                aria-label="New reminder"
+                placeholder="Add a reminder"
+                maxLength={120}
+              />
+              <button type="submit" aria-label="Save reminder" disabled={!draftReminder.trim()}><Plus size={15} /></button>
+            </form>
+            <ul className="calendar-reminder-list">
+              {selectedReminders.length ? selectedReminders.map((item) => (
+                <li key={item.id}>
+                  <span>{item.title}</span>
+                  <button type="button" aria-label={'Delete reminder: ' + item.title} onClick={() => saveReminders(reminders.filter((reminder) => reminder.id !== item.id))}><Trash2 size={14} /></button>
+                </li>
+              )) : <li className="calendar-no-events">No reminders for this day</li>}
+            </ul>
           </div>
         </div>
       </div>

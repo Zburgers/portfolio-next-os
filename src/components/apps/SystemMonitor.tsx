@@ -1,476 +1,221 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Cpu, 
-  MemoryStick, 
-  HardDrive, 
-  Activity, 
-  Network, 
-  ThermometerSun,
-  Zap,
-  Server,
-  Clock
-} from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Activity, Battery, BatteryCharging, Clock3, HardDrive, Network, RefreshCw } from 'lucide-react';
+import { useDesktop } from '@/context/DesktopContext';
 
-interface SystemStat {
-  label: string;
-  value: number;
-  maxValue: number;
-  unit: string;
-  color: string;
-  icon: React.ReactNode;
-}
+type ConnectionDetails = EventTarget & {
+  effectiveType?: string;
+  downlink?: number;
+  rtt?: number;
+  saveData?: boolean;
+};
+type ConnectionSnapshot = { effectiveType?: string; downlink?: number; rtt?: number; saveData?: boolean };
 
-interface ProcessInfo {
-  pid: number;
-  name: string;
-  cpu: number;
-  memory: number;
-  status: 'running' | 'sleeping' | 'stopped';
-}
+type BatteryDetails = EventTarget & { charging: boolean; level: number };
+type BatterySnapshot = { charging: boolean; level: number };
 
-// Simulated process list
-const generateProcesses = (): ProcessInfo[] => [
-  { pid: 1, name: 'systemd', cpu: 0.1, memory: 0.5, status: 'running' },
-  { pid: 245, name: 'gnome-shell', cpu: 8.2 + Math.random() * 3, memory: 4.8, status: 'running' },
-  { pid: 892, name: 'firefox', cpu: 12.5 + Math.random() * 5, memory: 8.2, status: 'running' },
-  { pid: 1024, name: 'code', cpu: 5.3 + Math.random() * 2, memory: 6.1, status: 'running' },
-  { pid: 1156, name: 'node', cpu: 3.2 + Math.random() * 2, memory: 2.8, status: 'running' },
-  { pid: 1289, name: 'portfolio-app', cpu: 2.1 + Math.random(), memory: 1.5, status: 'running' },
-  { pid: 445, name: 'pulseaudio', cpu: 0.3, memory: 0.8, status: 'sleeping' },
-  { pid: 567, name: 'NetworkManager', cpu: 0.2, memory: 0.4, status: 'running' },
-  { pid: 678, name: 'gdm-session', cpu: 0.1, memory: 0.3, status: 'sleeping' },
-  { pid: 789, name: 'dbus-daemon', cpu: 0.1, memory: 0.2, status: 'running' },
-];
+type BrowserNavigator = Navigator & {
+  connection?: ConnectionDetails;
+  getBattery?: () => Promise<BatteryDetails>;
+};
 
-// Animated progress bar component
-function AnimatedProgressBar({ 
-  value, 
-  color, 
-  height = 'h-2',
-  showGlow = true 
-}: { 
-  value: number; 
-  color: string; 
-  height?: string;
-  showGlow?: boolean;
-}) {
+type PageMemory = { usedJSHeapSize: number; jsHeapSizeLimit: number };
+
+type StorageEstimate = { usage?: number; quota?: number };
+
+const formatBytes = (bytes: number) => {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const formatUptime = (seconds: number) => {
+  const days = Math.floor(seconds / 86_400);
+  const hours = Math.floor((seconds % 86_400) / 3_600);
+  const minutes = Math.floor((seconds % 3_600) / 60);
+  const parts = [`${hours}h`, `${minutes}m`];
+  if (days) parts.unshift(`${days}d`);
+  return parts.join(' ');
+};
+
+function Metric({ label, value, detail, icon }: { label: string; value: string; detail?: string; icon: React.ReactNode }) {
   return (
-    <div className={`w-full ${height} bg-[color:var(--color-surface-muted)] rounded-full overflow-hidden relative`}>
-      <motion.div
-        initial={{ width: 0 }}
-        animate={{ width: `${Math.min(value, 100)}%` }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className={`h-full rounded-full ${color}`}
-        style={{
-          boxShadow: showGlow ? `0 0 10px ${color.includes('green') ? '#22c55e' : color.includes('blue') ? '#3b82f6' : color.includes('purple') ? '#a855f7' : '#f59e0b'}40` : 'none'
-        }}
-      />
-    </div>
-  );
-}
-
-// CPU Usage Ring Chart
-function CpuRing({ usage }: { usage: number }) {
-  const circumference = 2 * Math.PI * 45;
-  const strokeDashoffset = circumference - (usage / 100) * circumference;
-  
-  return (
-    <div className="relative w-32 h-32">
-      <svg className="w-full h-full transform -rotate-90">
-        <circle
-          cx="64"
-          cy="64"
-          r="45"
-          fill="none"
-          stroke="var(--color-surface-muted)"
-          strokeWidth="10"
-        />
-        <motion.circle
-          cx="64"
-          cy="64"
-          r="45"
-          fill="none"
-          stroke="url(#cpuGradient)"
-          strokeWidth="10"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset }}
-          transition={{ duration: 1, ease: "easeOut" }}
-        />
-        <defs>
-          <linearGradient id="cpuGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#22c55e" />
-            <stop offset="50%" stopColor="#3b82f6" />
-            <stop offset="100%" stopColor="#a855f7" />
-          </linearGradient>
-        </defs>
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <motion.span 
-          key={usage}
-          initial={{ scale: 1.1, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="text-2xl font-bold text-[color:var(--text-primary)]"
-        >
-          {usage.toFixed(0)}%
-        </motion.span>
-        <span className="text-xs text-[color:var(--text-secondary)]">CPU</span>
+    <section className="rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4" aria-label={label}>
+      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-[color:var(--text-secondary)]">
+        {icon}<span>{label}</span>
       </div>
-    </div>
+      <p className="mt-3 text-xl font-semibold text-[color:var(--text-primary)]">{value}</p>
+      {detail && <p className="mt-1 text-xs text-[color:var(--text-muted)]">{detail}</p>}
+    </section>
   );
 }
 
 export default function SystemMonitor() {
-  const [activeTab, setActiveTab] = useState<'resources' | 'processes'>('resources');
-  const [cpuUsage, setCpuUsage] = useState(35);
-  const [memoryUsage, setMemoryUsage] = useState(48);
-  const [diskUsage, setDiskUsage] = useState(62);
-  const [networkIn, setNetworkIn] = useState(1.2);
-  const [networkOut, setNetworkOut] = useState(0.4);
-  const [uptime, setUptime] = useState({ hours: 2, minutes: 34 });
-  const [processes, setProcesses] = useState<ProcessInfo[]>([]);
-  const [cpuHistory, setCpuHistory] = useState<number[]>(Array(20).fill(30));
+  const { windows, activeWindowId, focusWindow, updateWindow } = useDesktop();
+  const [activeTab, setActiveTab] = useState<'overview' | 'apps'>('overview');
+  const [now, setNow] = useState<Date | null>(null);
+  const [pageStartedAt, setPageStartedAt] = useState<Date | null>(null);
+  const [pageUptime, setPageUptime] = useState<number | null>(null);
+  const [online, setOnline] = useState<boolean | null>(null);
+  const [connection, setConnection] = useState<ConnectionSnapshot | null>(null);
+  const [battery, setBattery] = useState<BatterySnapshot | null>(null);
+  const [batteryAvailable, setBatteryAvailable] = useState<boolean | null>(null);
+  const [storage, setStorage] = useState<StorageEstimate | null>(null);
+  const [storageState, setStorageState] = useState<'loading' | 'available' | 'unavailable'>('loading');
+  const [pageMemory, setPageMemory] = useState<PageMemory | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  // Simulate dynamic system stats
+  const refreshStorage = useCallback(async () => {
+    if (!navigator.storage?.estimate) {
+      setStorageState('unavailable');
+      return;
+    }
+    try {
+      const estimate = await navigator.storage.estimate();
+      setStorage({ usage: estimate.usage, quota: estimate.quota });
+      setStorageState('available');
+    } catch {
+      setStorageState('unavailable');
+    }
+  }, []);
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCpuUsage(prev => Math.max(15, Math.min(85, prev + (Math.random() - 0.5) * 10)));
-      setMemoryUsage(prev => Math.max(30, Math.min(75, prev + (Math.random() - 0.5) * 3)));
-      setNetworkIn(prev => Math.max(0.1, Math.min(5, prev + (Math.random() - 0.5) * 0.5)));
-      setNetworkOut(prev => Math.max(0.05, Math.min(2, prev + (Math.random() - 0.5) * 0.2)));
-      setProcesses(generateProcesses());
-      setCpuHistory(prev => [...prev.slice(1), cpuUsage]);
-      
-      // Update uptime
-      setUptime(prev => {
-        const newMinutes = prev.minutes + 1;
-        if (newMinutes >= 60) {
-          return { hours: prev.hours + 1, minutes: 0 };
-        }
-        return { ...prev, minutes: newMinutes };
-      });
-    }, 2000);
+    void refreshStorage();
+    const timer = window.setInterval(() => void refreshStorage(), 30_000);
+    return () => window.clearInterval(timer);
+  }, [refreshStorage, refreshKey]);
 
-    setProcesses(generateProcesses());
-    return () => clearInterval(interval);
-  }, [cpuUsage]);
+  useEffect(() => {
+    const browserNavigator = navigator as BrowserNavigator;
+    const updateClock = () => {
+      setNow(new Date());
+      setPageUptime(performance.now() / 1_000);
+    };
+    const updateOnline = () => setOnline(navigator.onLine);
+    const updateConnection = () => {
+      const details = browserNavigator.connection;
+      setConnection(details ? { effectiveType: details.effectiveType, downlink: details.downlink, rtt: details.rtt, saveData: details.saveData } : null);
+    };
+    const updatePageMemory = () => {
+      const memory = (performance as Performance & { memory?: PageMemory }).memory;
+      setPageMemory(memory ? { usedJSHeapSize: memory.usedJSHeapSize, jsHeapSizeLimit: memory.jsHeapSizeLimit } : null);
+    };
 
-  const systemStats: SystemStat[] = [
-    {
-      label: 'CPU Usage',
-      value: cpuUsage,
-      maxValue: 100,
-      unit: '%',
-      color: 'bg-gradient-to-r from-green-500 to-emerald-400',
-      icon: <Cpu className="w-5 h-5" />
-    },
-    {
-      label: 'Memory',
-      value: memoryUsage,
-      maxValue: 100,
-      unit: '%',
-      color: 'bg-gradient-to-r from-blue-500 to-cyan-400',
-      icon: <MemoryStick className="w-5 h-5" />
-    },
-    {
-      label: 'Disk Usage',
-      value: diskUsage,
-      maxValue: 100,
-      unit: '%',
-      color: 'bg-gradient-to-r from-purple-500 to-pink-400',
-      icon: <HardDrive className="w-5 h-5" />
-    },
-  ];
+    updateClock();
+    setPageStartedAt(new Date(performance.timeOrigin));
+    updateOnline();
+    updateConnection();
+    updatePageMemory();
+    const clockTimer = window.setInterval(updateClock, 1_000);
+    const memoryTimer = window.setInterval(updatePageMemory, 5_000);
+    window.addEventListener('online', updateOnline);
+    window.addEventListener('offline', updateOnline);
+    browserNavigator.connection?.addEventListener('change', updateConnection);
+    let cancelled = false;
+    let batteryManager: BatteryDetails | null = null;
+    const updateBattery = () => {
+      if (batteryManager) setBattery({ charging: batteryManager.charging, level: batteryManager.level });
+    };
+    if (browserNavigator.getBattery) {
+      browserNavigator.getBattery().then((manager) => {
+        if (cancelled) return;
+        batteryManager = manager;
+        setBatteryAvailable(true);
+        updateBattery();
+        manager.addEventListener('levelchange', updateBattery);
+        manager.addEventListener('chargingchange', updateBattery);
+      }).catch(() => { if (!cancelled) setBatteryAvailable(false); });
+    } else {
+      setBatteryAvailable(false);
+    }
 
-  const sortedProcesses = useMemo(() => 
-    [...processes].sort((a, b) => b.cpu - a.cpu),
-    [processes]
-  );
+    return () => {
+      window.clearInterval(clockTimer);
+      window.clearInterval(memoryTimer);
+      cancelled = true;
+      window.removeEventListener('online', updateOnline);
+      window.removeEventListener('offline', updateOnline);
+      browserNavigator.connection?.removeEventListener('change', updateConnection);
+      batteryManager?.removeEventListener('levelchange', updateBattery);
+      batteryManager?.removeEventListener('chargingchange', updateBattery);
+    };
+  }, []);
 
-  const tabs = [
-    { id: 'resources', label: 'Resources', icon: <Activity className="w-4 h-4" /> },
-    { id: 'processes', label: 'Processes', icon: <Server className="w-4 h-4" /> },
-  ];
+  const storageUsage = storage?.usage;
+  const storageQuota = storage?.quota;
+  const storagePercent = storageUsage !== undefined && storageQuota !== undefined && storageQuota > 0 ? Math.min(100, (storageUsage / storageQuota) * 100) : null;
+  const sortedWindows = [...windows].sort((a, b) => b.zIndex - a.zIndex);
+  const connectionSummary = connection?.effectiveType
+    ? `${connection.effectiveType.toUpperCase()}${typeof connection.downlink === 'number' ? ` · ~${connection.downlink} Mbps` : ''}`
+    : 'No estimate';
+  const batteryIcon = battery?.charging ? <BatteryCharging className="h-4 w-4" aria-hidden="true" /> : <Battery className="h-4 w-4" aria-hidden="true" />;
 
   return (
-    <div className="h-full bg-[color:var(--color-surface)] text-[color:var(--text-primary)] flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-[color:var(--color-border)] bg-[color:var(--color-surface-muted)]">
+    <div className="flex h-full flex-col overflow-hidden bg-[color:var(--color-surface)] text-[color:var(--text-primary)]">
+      <header className="flex items-center justify-between gap-3 border-b border-[color:var(--color-border)] bg-[color:var(--color-surface-muted)] px-5 py-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600">
-            <Activity className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-base font-semibold">System Monitor</h1>
-            <p className="text-xs text-[color:var(--text-secondary)]">Fedora Linux 42</p>
-          </div>
+          <div className="rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 p-2"><Activity className="h-5 w-5 text-white" aria-hidden="true" /></div>
+          <div><h1 className="text-base font-semibold">System Monitor</h1><p className="text-xs text-[color:var(--text-secondary)]">Session status</p></div>
         </div>
-        
-        <div className="flex items-center gap-2 text-xs text-[color:var(--text-secondary)]">
-          <Clock className="w-3.5 h-3.5" />
-          <span>Uptime: {uptime.hours}h {uptime.minutes}m</span>
-        </div>
-      </div>
+        <button type="button" onClick={() => setRefreshKey((key) => key + 1)} className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--color-border)] px-3 py-2 text-xs text-[color:var(--text-secondary)] hover:bg-[color:var(--color-surface)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)]" aria-label="Refresh storage estimate">
+          <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" /> Refresh
+        </button>
+      </header>
 
-      {/* Tabs */}
-      <div className="flex border-b border-[color:var(--color-border)] bg-[color:var(--color-surface)]">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as 'resources' | 'processes')}
-            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors relative ${
-              activeTab === tab.id 
-                ? 'text-[color:var(--accent)]' 
-                : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
-            }`}
-          >
-            {tab.icon}
-            {tab.label}
-            {activeTab === tab.id && (
-              <motion.div
-                layoutId="activeTab"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-[color:var(--accent)]"
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              />
-            )}
+      <nav className="flex border-b border-[color:var(--color-border)] px-4" aria-label="System Monitor sections" role="tablist">
+        {(['overview', 'apps'] as const).map((tab) => (
+          <button key={tab} id={`monitor-tab-${tab}`} type="button" role="tab" tabIndex={activeTab === tab ? 0 : -1} aria-selected={activeTab === tab} aria-controls={`monitor-panel-${tab}`} onClick={() => setActiveTab(tab)} onKeyDown={(event) => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            const nextTab = event.key === 'Home' ? 'overview' : event.key === 'End' ? 'apps' : tab === 'overview' ? 'apps' : 'overview';
+            setActiveTab(nextTab);
+            document.getElementById(`monitor-tab-${nextTab}`)?.focus();
+          }} className={`border-b-2 px-4 py-3 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)] ${activeTab === tab ? 'border-[color:var(--accent)] text-[color:var(--accent)]' : 'border-transparent text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'}`}>
+            {tab === 'overview' ? 'Overview' : `App windows (${windows.length})`}
           </button>
         ))}
-      </div>
+      </nav>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-5">
-        <AnimatePresence mode="wait">
-          {activeTab === 'resources' ? (
-            <motion.div
-              key="resources"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-6"
-            >
-              {/* CPU Ring + Stats */}
-              <div className="flex items-start gap-6">
-                <CpuRing usage={cpuUsage} />
-                
-                <div className="flex-1 space-y-4">
-                  {systemStats.map((stat, index) => (
-                    <motion.div
-                      key={stat.label}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="space-y-2"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-[color:var(--text-secondary)]">{stat.icon}</span>
-                          <span className="font-medium">{stat.label}</span>
-                        </div>
-                        <span className="text-sm font-mono text-[color:var(--text-secondary)]">
-                          {stat.value.toFixed(1)}{stat.unit}
-                        </span>
-                      </div>
-                      <AnimatedProgressBar value={stat.value} color={stat.color} />
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-
-              {/* CPU History Graph */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="p-4 rounded-xl bg-[color:var(--color-surface-muted)] border border-[color:var(--color-border)]"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-green-500" />
-                    CPU History
-                  </span>
-                  <span className="text-xs text-[color:var(--text-muted)]">Last 40 seconds</span>
-                </div>
-                <div className="h-20 flex items-end gap-0.5">
-                  {cpuHistory.map((value, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ height: 0 }}
-                      animate={{ height: `${value}%` }}
-                      transition={{ duration: 0.3 }}
-                      className="flex-1 bg-gradient-to-t from-green-500 to-emerald-400 rounded-t opacity-80"
-                    />
-                  ))}
-                </div>
-              </motion.div>
-
-              {/* Network & Temp */}
-              <div className="grid grid-cols-2 gap-4">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="p-4 rounded-xl bg-[color:var(--color-surface-muted)] border border-[color:var(--color-border)]"
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <Network className="w-4 h-4 text-blue-500" />
-                    <span className="text-sm font-medium">Network</span>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-[color:var(--text-secondary)]">↓ Download</span>
-                      <span className="font-mono text-green-500">{networkIn.toFixed(1)} MB/s</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-[color:var(--text-secondary)]">↑ Upload</span>
-                      <span className="font-mono text-blue-500">{networkOut.toFixed(2)} MB/s</span>
-                    </div>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
-                  className="p-4 rounded-xl bg-[color:var(--color-surface-muted)] border border-[color:var(--color-border)]"
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <ThermometerSun className="w-4 h-4 text-orange-500" />
-                    <span className="text-sm font-medium">Temperature</span>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-[color:var(--text-secondary)]">CPU</span>
-                      <span className="font-mono text-orange-500">52°C</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-[color:var(--text-secondary)]">GPU</span>
-                      <span className="font-mono text-yellow-500">48°C</span>
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-
-              {/* System Info */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="p-4 rounded-xl bg-[color:var(--color-surface-muted)] border border-[color:var(--color-border)]"
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <Zap className="w-4 h-4 text-purple-500" />
-                  <span className="text-sm font-medium">System Information</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-[color:var(--text-muted)]">Kernel</span>
-                    <p className="font-mono text-[color:var(--text-secondary)]">6.12.0-300.fc42.x86_64</p>
-                  </div>
-                  <div>
-                    <span className="text-[color:var(--text-muted)]">Memory</span>
-                    <p className="font-mono text-[color:var(--text-secondary)]">15.2 GB / 32 GB</p>
-                  </div>
-                  <div>
-                    <span className="text-[color:var(--text-muted)]">CPU</span>
-                    <p className="font-mono text-[color:var(--text-secondary)]">Intel Core i9 @ 3.5GHz</p>
-                  </div>
-                  <div>
-                    <span className="text-[color:var(--text-muted)]">Graphics</span>
-                    <p className="font-mono text-[color:var(--text-secondary)]">Intel Iris Xe</p>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="processes"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              {/* Processes Table */}
-              <div className="rounded-xl border border-[color:var(--color-border)] overflow-hidden">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-[color:var(--color-surface-muted)] text-left text-xs text-[color:var(--text-secondary)]">
-                      <th className="px-4 py-3 font-medium">PID</th>
-                      <th className="px-4 py-3 font-medium">Process Name</th>
-                      <th className="px-4 py-3 font-medium">Status</th>
-                      <th className="px-4 py-3 font-medium text-right">CPU %</th>
-                      <th className="px-4 py-3 font-medium text-right">Memory %</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedProcesses.map((process, index) => (
-                      <motion.tr
-                        key={process.pid}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.03 }}
-                        className="border-t border-[color:var(--color-border)] hover:bg-[color:var(--color-surface-muted)] transition-colors"
-                      >
-                        <td className="px-4 py-2.5 font-mono text-sm text-[color:var(--text-muted)]">
-                          {process.pid}
-                        </td>
-                        <td className="px-4 py-2.5 text-sm font-medium">
-                          {process.name}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs ${
-                            process.status === 'running' 
-                              ? 'bg-green-500/10 text-green-500' 
-                              : process.status === 'sleeping'
-                              ? 'bg-yellow-500/10 text-yellow-500'
-                              : 'bg-red-500/10 text-red-500'
-                          }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${
-                              process.status === 'running' 
-                                ? 'bg-green-500' 
-                                : process.status === 'sleeping'
-                                ? 'bg-yellow-500'
-                                : 'bg-red-500'
-                            }`} />
-                            {process.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          <span className={`font-mono text-sm ${
-                            process.cpu > 10 ? 'text-orange-500' : 
-                            process.cpu > 5 ? 'text-yellow-500' : 
-                            'text-[color:var(--text-secondary)]'
-                          }`}>
-                            {process.cpu.toFixed(1)}%
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          <span className="font-mono text-sm text-[color:var(--text-secondary)]">
-                            {process.memory.toFixed(1)}%
-                          </span>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Process Summary */}
-              <div className="mt-4 flex items-center justify-between text-sm text-[color:var(--text-muted)]">
-                <span>{processes.length} processes</span>
-                <span>
-                  {processes.filter(p => p.status === 'running').length} running, {' '}
-                  {processes.filter(p => p.status === 'sleeping').length} sleeping
-                </span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      <main className="min-h-0 flex-1 overflow-y-auto p-5" role="tabpanel" id={`monitor-panel-${activeTab}`} aria-labelledby={`monitor-tab-${activeTab}`}>
+        {activeTab === 'overview' ? (
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <Metric label="Page uptime" value={pageUptime === null ? 'Starting…' : formatUptime(pageUptime)} detail={pageStartedAt ? `Since ${pageStartedAt.toLocaleTimeString()}` : undefined} icon={<Clock3 className="h-4 w-4" aria-hidden="true" />} />
+              <Metric label="Local time" value={now?.toLocaleTimeString() ?? 'Checking…'} detail={now?.toLocaleDateString(undefined, { dateStyle: 'medium' })} icon={<Clock3 className="h-4 w-4" aria-hidden="true" />} />
+              <Metric label="Connection" value={online === null ? 'Checking…' : online ? 'Online' : 'Offline'} detail={connectionSummary} icon={<Network className="h-4 w-4" aria-hidden="true" />} />
+              <Metric label="Site storage" value={storageState === 'loading' ? 'Checking…' : storageState === 'unavailable' ? 'Unavailable' : storageUsage === undefined ? 'Estimate unavailable' : formatBytes(storageUsage)} detail={storageQuota ? `Quota ${formatBytes(storageQuota)}` : undefined} icon={<HardDrive className="h-4 w-4" aria-hidden="true" />} />
+              <Metric label="Page memory" value={pageMemory ? formatBytes(pageMemory.usedJSHeapSize) : 'Unavailable'} detail={pageMemory ? `Heap limit ${formatBytes(pageMemory.jsHeapSizeLimit)}` : undefined} icon={<Activity className="h-4 w-4" aria-hidden="true" />} />
+              <Metric label="Battery" value={battery ? `${Math.round(battery.level * 100)}%${battery.charging ? ' · charging' : ''}` : batteryAvailable === false ? 'Unavailable' : 'Checking…'} icon={batteryIcon} />
+            </div>
+            {storagePercent !== null && (
+              <section className="rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4" aria-label="Origin storage estimate">
+                <div className="mb-2 flex items-center justify-between text-sm"><span>Site storage</span><span className="font-mono text-[color:var(--text-secondary)]">{storagePercent.toFixed(1)}%</span></div>
+                <div className="h-2 overflow-hidden rounded-full bg-[color:var(--color-surface-muted)]"><div className="h-full rounded-full bg-[color:var(--accent)] transition-[width]" style={{ width: `${storagePercent}%` }} /></div>
+                <p className="mt-2 text-xs text-[color:var(--text-muted)]">{formatBytes(storageUsage!)} used of {formatBytes(storageQuota!)} quota.</p>
+              </section>
+            )}
+          </div>
+        ) : (
+          <section className="overflow-hidden rounded-xl border border-[color:var(--color-border)]" aria-label="Open desktop application windows">
+            <div className="border-b border-[color:var(--color-border)] bg-[color:var(--color-surface-muted)] px-4 py-3 text-sm font-medium">Open app windows</div>
+            {sortedWindows.length ? (
+              <ul className="divide-y divide-[color:var(--color-border)]">
+                {sortedWindows.map((appWindow) => {
+                  const state = appWindow.minimized ? 'Minimized' : appWindow.id === activeWindowId ? 'Focused' : 'Open';
+                  return (
+                    <li key={appWindow.id}>
+                      <button type="button" onClick={() => { updateWindow(appWindow.id, { minimized: false }); focusWindow(appWindow.id); }} className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left hover:bg-[color:var(--color-surface-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[color:var(--accent)]">
+                        <span className="min-w-0"><span className="block truncate text-sm font-medium">{appWindow.title}</span><span className="block text-xs text-[color:var(--text-muted)]">{appWindow.type}</span></span>
+                        <span className="shrink-0 rounded-full border border-[color:var(--color-border)] px-2.5 py-1 text-xs text-[color:var(--text-secondary)]">{state}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : <p className="p-4 text-sm text-[color:var(--text-secondary)]">No desktop app windows are open.</p>}
+          </section>
+        )}
+      </main>
     </div>
   );
 }
